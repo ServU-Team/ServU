@@ -7,12 +7,12 @@
 
 
 //
-//  Models.swift
+//  ServUService.swift
 //  ServU
 //
-//  Created by Quian Bowden on 6/27/25.
+//  Created by Quian Bowden on 7/31/25.
 //  Updated by Assistant on 7/31/25.
-//  Added ServUService model for enhanced service booking
+//  Fixed Service model compatibility with deposit features
 //
 
 import Foundation
@@ -58,7 +58,60 @@ struct ServUService: Identifiable {
     }
 }
 
-// MARK: - Deposit Type (NEW)
+// MARK: - Updated Service Model (LEGACY - Now with deposit support)
+struct Service: Identifiable {
+    let id = UUID()
+    var name: String
+    var description: String
+    var price: Double
+    var duration: String // e.g., "1 hour", "30 minutes"
+    var isAvailable: Bool = true
+    
+    // NEW: Deposit/Payment Properties (added for compatibility)
+    var requiresDeposit: Bool = false
+    var depositAmount: Double = 0.0
+    var depositType: DepositType = .fixed
+    var depositPolicy: String = ""
+    
+    // NEW: Computed Properties (added for compatibility)
+    var displayDepositAmount: String {
+        switch depositType {
+        case .fixed:
+            return String(format: "$%.2f", depositAmount)
+        case .percentage:
+            let amount = price * (depositAmount / 100.0)
+            return String(format: "$%.2f (%.0f%%)", amount, depositAmount)
+        }
+    }
+    
+    var calculatedDepositAmount: Double {
+        switch depositType {
+        case .fixed:
+            return depositAmount
+        case .percentage:
+            return price * (depositAmount / 100.0)
+        }
+    }
+    
+    var remainingBalance: Double {
+        return price - calculatedDepositAmount
+    }
+    
+    // MARK: - Initializers
+    init(name: String, description: String, price: Double, duration: String, isAvailable: Bool = true, requiresDeposit: Bool = false, depositAmount: Double = 0.0, depositType: DepositType = .fixed, depositPolicy: String = "") {
+        self.name = name
+        self.description = description
+        self.price = price
+        self.duration = duration
+        self.isAvailable = isAvailable
+        self.requiresDeposit = requiresDeposit
+        self.depositAmount = depositAmount
+        self.depositType = depositType
+        self.depositPolicy = depositPolicy
+    }
+}
+
+// MARK: - Deposit Type
 enum DepositType: String, CaseIterable {
     case fixed = "Fixed Amount"
     case percentage = "Percentage"
@@ -66,15 +119,25 @@ enum DepositType: String, CaseIterable {
     var displayName: String {
         return self.rawValue
     }
+    
+    var description: String {
+        switch self {
+        case .fixed:
+            return "Fixed dollar amount"
+        case .percentage:
+            return "Percentage of service price"
+        }
+    }
 }
 
-// MARK: - Payment Status (NEW)
+// MARK: - Payment Status (Updated with legacy support)
 enum PaymentStatus: String, CaseIterable {
     case pending = "Pending"
     case depositPaid = "Deposit Paid"
     case fullyPaid = "Fully Paid"
     case refunded = "Refunded"
     case failed = "Failed"
+    case notRequired = "No Payment Required" // Added for legacy support
     
     var color: Color {
         switch self {
@@ -83,6 +146,7 @@ enum PaymentStatus: String, CaseIterable {
         case .fullyPaid: return .green
         case .refunded: return .gray
         case .failed: return .red
+        case .notRequired: return .green
         }
     }
     
@@ -93,6 +157,7 @@ enum PaymentStatus: String, CaseIterable {
         case .fullyPaid: return "checkmark.circle.fill"
         case .refunded: return "arrow.counterclockwise"
         case .failed: return "xmark.circle"
+        case .notRequired: return "checkmark.circle"
         }
     }
 }
@@ -195,7 +260,7 @@ struct Business: Identifiable {
     var isActive: Bool = true
     var location: String
     var contactInfo: ContactInfo
-    var services: [ServUService] = [] // Updated to use ServUService
+    var services: [Service] = [] // Updated to use Service with deposit support
     var availability: BusinessHours
 }
 
@@ -285,16 +350,6 @@ struct DaySchedule {
     var isOpen: Bool
     var openTime: String
     var closeTime: String
-}
-
-// MARK: - Legacy Service Model (DEPRECATED - Use ServUService instead)
-struct Service: Identifiable {
-    let id = UUID()
-    var name: String
-    var description: String
-    var price: Double
-    var duration: String // e.g., "1 hour", "30 minutes"
-    var isAvailable: Bool = true
 }
 
 // MARK: - College Data Service (ORIGINAL)

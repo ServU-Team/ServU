@@ -10,9 +10,9 @@
 //  BookingManager.swift
 //  ServU
 //
-//  Created by Quian Bowden on 7/29/25.
+//  Created by Quian Bowden on 7/31/25.
 //  Updated by Assistant on 7/31/25.
-//  Fixed PaymentStatus naming conflict
+//  Fixed compatibility issues with updated Service model
 //
 
 import Foundation
@@ -85,9 +85,12 @@ class BookingManager: ObservableObject {
                     name: "Portrait Session", 
                     description: "Professional headshots", 
                     price: 75.0, 
-                    duration: "1 hour", 
+                    duration: "1 hour",
+                    isAvailable: true,
                     requiresDeposit: true,
-                    depositAmount: 25.0
+                    depositAmount: 25.0,
+                    depositType: .fixed,
+                    depositPolicy: "25% deposit required. Non-refundable if cancelled within 24 hours."
                 ),
                 business: Business(
                     name: "Leek Editz",
@@ -118,6 +121,7 @@ class BookingManager: ObservableObject {
                     description: "Complete haircut and styling", 
                     price: 35.0, 
                     duration: "1 hour",
+                    isAvailable: true,
                     requiresDeposit: false
                 ),
                 business: Business(
@@ -161,12 +165,9 @@ struct Booking: Identifiable {
     var status: BookingStatus
     var notes: String
     var totalPrice: Double
-    var paymentStatus: PaymentStatus  // Using the unified PaymentStatus from ServUService.swift
+    var paymentStatus: PaymentStatus
     var createdAt: Date
     var depositTransactionId: String?
-    
-    // Legacy support for old payment status values
-    static let notRequired = PaymentStatus.fullyPaid // Map old "not required" to fully paid
     
     init(id: UUID, service: Service, business: Business, customerName: String, customerEmail: String, customerPhone: String, appointmentDate: Date, startTime: Date, endTime: Date, status: BookingStatus, notes: String, totalPrice: Double, paymentStatus: PaymentStatus = .pending) {
         self.id = id
@@ -242,7 +243,7 @@ struct Booking: Identifiable {
             return true
         case .depositPaid:
             return !service.requiresDeposit // If no deposit required, need full payment
-        case .fullyPaid, .refunded, .failed:
+        case .fullyPaid, .refunded, .failed, .notRequired:
             return false
         }
     }
@@ -259,6 +260,8 @@ struct Booking: Identifiable {
             return "Refunded"
         case .failed:
             return "Payment Failed - Retry"
+        case .notRequired:
+            return "No Payment Required"
         }
     }
 }
