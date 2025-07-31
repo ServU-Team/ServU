@@ -12,6 +12,7 @@
 //
 //  Created by Quian Bowden on 7/29/25.
 //  Updated by Assistant on 7/31/25.
+//  Fixed PaymentStatus naming conflict
 //
 
 import Foundation
@@ -160,10 +161,14 @@ struct Booking: Identifiable {
     var status: BookingStatus
     var notes: String
     var totalPrice: Double
-    var paymentStatus: PaymentStatus
+    var paymentStatus: PaymentStatus  // Using the unified PaymentStatus from ServUService.swift
     var createdAt: Date
+    var depositTransactionId: String?
     
-    init(id: UUID, service: Service, business: Business, customerName: String, customerEmail: String, customerPhone: String, appointmentDate: Date, startTime: Date, endTime: Date, status: BookingStatus, notes: String, totalPrice: Double, paymentStatus: PaymentStatus = .notRequired) {
+    // Legacy support for old payment status values
+    static let notRequired = PaymentStatus.fullyPaid // Map old "not required" to fully paid
+    
+    init(id: UUID, service: Service, business: Business, customerName: String, customerEmail: String, customerPhone: String, appointmentDate: Date, startTime: Date, endTime: Date, status: BookingStatus, notes: String, totalPrice: Double, paymentStatus: PaymentStatus = .pending) {
         self.id = id
         self.service = service
         self.business = business
@@ -203,6 +208,59 @@ struct Booking: Identifiable {
     var canReschedule: Bool {
         return isUpcoming && status == .confirmed
     }
+    
+    var requiresDeposit: Bool {
+        return service.requiresDeposit
+    }
+    
+    var depositAmount: Double {
+        return service.calculatedDepositAmount
+    }
+    
+    var remainingBalance: Double {
+        return service.remainingBalance
+    }
+    
+    var formattedDepositAmount: String {
+        if requiresDeposit {
+            return String(format: "$%.2f", depositAmount)
+        }
+        return "$0.00"
+    }
+    
+    var formattedRemainingBalance: String {
+        return String(format: "$%.2f", remainingBalance)
+    }
+    
+    var formattedTotalPrice: String {
+        return String(format: "$%.2f", totalPrice)
+    }
+    
+    var requiresPaymentAction: Bool {
+        switch paymentStatus {
+        case .pending:
+            return true
+        case .depositPaid:
+            return !service.requiresDeposit // If no deposit required, need full payment
+        case .fullyPaid, .refunded, .failed:
+            return false
+        }
+    }
+    
+    var nextPaymentAction: String {
+        switch paymentStatus {
+        case .pending:
+            return service.requiresDeposit ? "Pay Deposit" : "Pay Full Amount"
+        case .depositPaid:
+            return "Pay Remaining Balance"
+        case .fullyPaid:
+            return "Paid in Full"
+        case .refunded:
+            return "Refunded"
+        case .failed:
+            return "Payment Failed - Retry"
+        }
+    }
 }
 
 // MARK: - Booking Status
@@ -240,45 +298,6 @@ enum BookingStatus: String, CaseIterable {
             return "xmark.circle"
         case .noShow:
             return "exclamationmark.circle"
-        }
-    }
-}
-
-// MARK: - Payment Status
-enum PaymentStatus: String, CaseIterable {
-    case notRequired = "No Payment Required"
-    case depositPaid = "Deposit Paid"
-    case fullPayment = "Fully Paid"
-    case pending = "Payment Pending"
-    case overdue = "Payment Overdue"
-    
-    var color: Color {
-        switch self {
-        case .notRequired:
-            return .gray
-        case .depositPaid:
-            return .orange
-        case .fullPayment:
-            return .green
-        case .pending:
-            return .yellow
-        case .overdue:
-            return .red
-        }
-    }
-    
-    var icon: String {
-        switch self {
-        case .notRequired:
-            return "minus.circle"
-        case .depositPaid:
-            return "dollarsign.circle.fill"
-        case .fullPayment:
-            return "checkmark.circle.fill"
-        case .pending:
-            return "clock.fill"
-        case .overdue:
-            return "exclamationmark.triangle.fill"
         }
     }
 }

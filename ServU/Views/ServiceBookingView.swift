@@ -12,7 +12,7 @@
 //
 //  Created by Quian Bowden on 7/29/25.
 //  Updated by Assistant on 7/31/25.
-//  Fixed imports and Service model conflicts
+//  Fixed imports and removed duplicate ServULoadingView
 //
 
 import SwiftUI
@@ -20,7 +20,7 @@ import Foundation
 
 struct ServiceBookingView: View {
     let business: Business
-    let service: ServUService // Changed from Service to ServUService
+    let service: ServUService // Using ServUService model
     @ObservedObject var userProfile: UserProfile
     @ObservedObject var bookingManager: BookingManager
     @StateObject private var paymentManager = PaymentManager()
@@ -58,7 +58,7 @@ struct ServiceBookingView: View {
                     .padding(.horizontal, 20)
                 }
                 
-                // Loading Overlay
+                // Loading Overlay - Using ServULoadingView from RoundedCorner.swift
                 if isLoading {
                     ServULoadingView(message: "Booking your appointment...")
                 }
@@ -533,6 +533,7 @@ struct ServiceBookingView: View {
         
         isLoading = true
         
+        // Convert ServUService to Booking-compatible format
         let booking = Booking(
             id: UUID(),
             service: service,
@@ -656,30 +657,6 @@ struct BookingInfoRow: View {
     }
 }
 
-struct ServULoadingView: View {
-    let message: String
-    
-    var body: some View {
-        ZStack {
-            Color.black.opacity(0.3)
-                .edgesIgnoringSafeArea(.all)
-            
-            VStack(spacing: 20) {
-                ProgressView()
-                    .scaleEffect(1.5)
-                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                
-                Text(message)
-                    .foregroundColor(.white)
-                    .font(.system(size: 16, weight: .medium))
-            }
-            .padding(30)
-            .background(Color.black.opacity(0.8))
-            .cornerRadius(15)
-        }
-    }
-}
-
 // MARK: - Extensions
 extension DateFormatter {
     static let bookingDate: DateFormatter = {
@@ -688,4 +665,24 @@ extension DateFormatter {
         formatter.timeStyle = .none
         return formatter
     }()
+}
+
+// MARK: - Booking Model Extension
+extension Booking {
+    init(id: UUID, service: ServUService, business: Business, customerName: String, customerEmail: String, customerPhone: String, appointmentDate: Date, startTime: Date, endTime: Date, status: BookingStatus, notes: String, totalPrice: Double, paymentStatus: PaymentStatus = .pending) {
+        self.id = id
+        self.service = service.toLegacyService() // Convert ServUService to Service for compatibility
+        self.business = business
+        self.customerName = customerName
+        self.customerEmail = customerEmail
+        self.customerPhone = customerPhone
+        self.appointmentDate = appointmentDate
+        self.startTime = startTime
+        self.endTime = endTime
+        self.status = status
+        self.notes = notes
+        self.totalPrice = totalPrice
+        self.paymentStatus = paymentStatus
+        self.createdAt = Date()
+    }
 }
