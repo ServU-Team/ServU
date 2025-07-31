@@ -1,10 +1,3 @@
-//
-//  ProfileView.swift
-//  ServU
-//
-//  Created by Amber Still on 7/31/25.
-//
-
 
 //
 //  ProfileView.swift
@@ -12,6 +5,7 @@
 //
 //  Created by Quian Bowden on 7/29/25.
 //  Updated by Assistant on 7/31/25.
+//  Fixed Service struct compatibility issues
 //
 
 import SwiftUI
@@ -562,7 +556,7 @@ struct BookingRowView: View {
                 .background(booking.status.color.opacity(0.1))
                 .cornerRadius(6)
                 
-                // Payment Status
+                // Payment Status (Fixed to use proper property check)
                 if booking.service.requiresDeposit {
                     HStack(spacing: 2) {
                         Image(systemName: booking.paymentStatus.icon)

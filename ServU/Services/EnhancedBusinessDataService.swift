@@ -12,7 +12,7 @@
 //
 //  Created by Quian Bowden on 7/29/25.
 //  Updated by Assistant on 7/31/25.
-//  Updated for ServUService compatibility
+//  Fixed compilation errors and type mismatches
 //
 
 import Foundation
@@ -37,52 +37,14 @@ class EnhancedBusinessDataService: ObservableObject {
         )
         
         // Create enhanced businesses with products and services
-        let businesses = [
-            // FLYEST AMBITIONS - Clothing Store
-            createFlyestAmbitions(),
-            
-            // DELINQUENT APPAREL - Streetwear Store  
-            createDelinquentApparel(),
-            
-            // LEEK EDITZ - Photography Services
-            EnhancedBusiness(
-                name: "Leek Editz",
-                businessType: .services,
-                description: "Professional photography and video editing services for events, portraits, and social media content. Capturing your best moments with creativity and style.",
-                rating: 5.0,
-                priceRange: .moderate,
-                imageURL: nil,
-                isActive: true,
-                location: "Tuskegee University Campus",
-                contactInfo: ContactInfo(
-                    email: "leek@tuskegee.edu",
-                    phone: "(334) 555-0150",
-                    instagram: "@leekeditz",
-                    website: "www.leekeditz.com"
-                ),
-                ownerId: "leek123",
-                ownerName: "Marcus Lee",
-                serviceCategories: [.photoVideo],
-                services: [
-                    ServUService(name: "Event Photography", description: "Full event coverage with professional editing", price: 150.0, duration: "3 hours", requiresDeposit: true, depositAmount: 50.0, depositType: .fixed, depositPolicy: "50% deposit required to secure booking. Refundable if cancelled 48+ hours before event."),
-                    ServUService(name: "Portrait Session", description: "Professional headshots and portraits", price: 75.0, duration: "1 hour", requiresDeposit: true, depositAmount: 25.0, depositType: .fixed, depositPolicy: "25% deposit required. Non-refundable if cancelled within 24 hours."),
-                    ServUService(name: "Video Editing", description: "Professional video editing and color grading", price: 100.0, duration: "2 days", requiresDeposit: false),
-                    ServUService(name: "Social Media Package", description: "Photos + videos optimized for social media", price: 200.0, duration: "2 hours", requiresDeposit: true, depositAmount: 30.0, depositType: .percentage, depositPolicy: "30% deposit required for social media packages.")
-                ],
-                availability: BusinessHours.defaultHours,
-                products: [],
-                productCategories: [],
-                shippingOptions: [],
-                isVerified: true,
-                totalSales: 45
-            ),
-            
-            // CAMPUS TECH STORE - Electronics & Services
-            createCampusTechStore(),
-            
-            // Additional service businesses
-            createServiceBusinesses()
-        ].flatMap { $0 }
+        var businesses: [EnhancedBusiness] = []
+        
+        // Add individual businesses
+        businesses.append(contentsOf: createFlyestAmbitions())
+        businesses.append(contentsOf: createDelinquentApparel())
+        businesses.append(createLeekEditz())
+        businesses.append(contentsOf: createCampusTechStore())
+        businesses.append(contentsOf: createServiceBusinesses())
         
         // Assign businesses to lists
         self.allBusinesses = businesses
@@ -248,6 +210,41 @@ class EnhancedBusinessDataService: ObservableObject {
         )
         
         return [business]
+    }
+    
+    // MARK: - LEEK EDITZ - Photography Services
+    private func createLeekEditz() -> EnhancedBusiness {
+        return EnhancedBusiness(
+            name: "Leek Editz",
+            businessType: .services,
+            description: "Professional photography and video editing services for events, portraits, and social media content. Capturing your best moments with creativity and style.",
+            rating: 5.0,
+            priceRange: .moderate,
+            imageURL: nil,
+            isActive: true,
+            location: "Tuskegee University Campus",
+            contactInfo: ContactInfo(
+                email: "leek@tuskegee.edu",
+                phone: "(334) 555-0150",
+                instagram: "@leekeditz",
+                website: "www.leekeditz.com"
+            ),
+            ownerId: "leek123",
+            ownerName: "Marcus Lee",
+            serviceCategories: [.photoVideo],
+            services: [
+                ServUService(name: "Event Photography", description: "Full event coverage with professional editing", price: 150.0, duration: "3 hours", requiresDeposit: true, depositAmount: 50.0, depositType: .fixed, depositPolicy: "50% deposit required to secure booking. Refundable if cancelled 48+ hours before event."),
+                ServUService(name: "Portrait Session", description: "Professional headshots and portraits", price: 75.0, duration: "1 hour", requiresDeposit: true, depositAmount: 25.0, depositType: .fixed, depositPolicy: "25% deposit required. Non-refundable if cancelled within 24 hours."),
+                ServUService(name: "Video Editing", description: "Professional video editing and color grading", price: 100.0, duration: "2 days", requiresDeposit: false),
+                ServUService(name: "Social Media Package", description: "Photos + videos optimized for social media", price: 200.0, duration: "2 hours", requiresDeposit: true, depositAmount: 30.0, depositType: .percentage, depositPolicy: "30% deposit required for social media packages.")
+            ],
+            availability: BusinessHours.defaultHours,
+            products: [],
+            productCategories: [],
+            shippingOptions: [],
+            isVerified: true,
+            totalSales: 45
+        )
     }
     
     // MARK: - Campus Tech Store - Electronics & Tech Services
