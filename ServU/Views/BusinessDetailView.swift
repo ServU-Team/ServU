@@ -2,7 +2,7 @@
 //  BusinessDetailView.swift
 //  ServU
 //
-//  Created by Amber Still on 7/30/25.
+//  Created by Amber Still on 7/31/25.
 //
 
 
@@ -11,8 +11,8 @@
 //  ServU
 //
 //  Created by Quian Bowden on 6/27/25.
-//  Updated by Assistant on 7/29/25.
-//  Fixed service booking navigation
+//  Updated by Assistant on 7/31/25.
+//  Fixed Service/ServUService conversion issues
 //
 
 import SwiftUI
@@ -20,7 +20,7 @@ import SwiftUI
 struct BusinessDetailView: View {
     let business: Business
     @ObservedObject var userProfile: UserProfile
-    @StateObject private var bookingManager = BookingManager() // ✅ FIXED: Add booking manager
+    @StateObject private var bookingManager = BookingManager()
     
     @State private var selectedService: Service?
     @State private var showingBookingFlow = false
@@ -47,11 +47,11 @@ struct BusinessDetailView: View {
             .navigationBarHidden(true)
             .background(backgroundGradient)
             .sheet(isPresented: $showingBookingFlow) {
-                // ✅ FIXED: Properly pass all required parameters
+                // ✅ FIXED: Convert Service to ServUService for compatibility
                 if let selectedService = selectedService {
                     ServiceBookingView(
                         business: business,
-                        service: selectedService,
+                        service: selectedService.toServUService(), // Convert to ServUService
                         userProfile: userProfile,
                         bookingManager: bookingManager
                     )
@@ -235,7 +235,6 @@ struct BusinessDetailView: View {
                 VStack(spacing: 12) {
                     ForEach(Array(business.services.prefix(3))) { service in
                         ServicePreviewRow(service: service, userProfile: userProfile) {
-                            // ✅ FIXED: Properly set selected service and show booking
                             selectedService = service
                             showingBookingFlow = true
                         }
@@ -280,7 +279,6 @@ struct BusinessDetailView: View {
             LazyVStack(spacing: 16) {
                 ForEach(business.services) { service in
                     ServiceCard(service: service, userProfile: userProfile) {
-                        // ✅ FIXED: Properly set selected service and show booking
                         selectedService = service
                         showingBookingFlow = true
                     }

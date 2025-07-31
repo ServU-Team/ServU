@@ -38,28 +38,16 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
-				Models/BusinessConversionUtilities.swift,
 			);
 			target = 5CD49E7A2E0F31790079506A /* ServU */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
-/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-		5C9002112E3BEFE900217ACC /* Exceptions for "ServU" folder in "Copy Bundle Resources" phase from "ServU" target */ = {
-			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
-			buildPhase = 5CD49E792E0F31790079506A /* Resources */;
-			membershipExceptions = (
-				Models/BusinessConversionUtilities.swift,
-			);
-		};
-/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		5CD49E7D2E0F31790079506A /* ServU */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				5CD49EBD2E1B16670079506A /* Exceptions for "ServU" folder in "ServU" target */,
-				5C9002112E3BEFE900217ACC /* Exceptions for "ServU" folder in "Copy Bundle Resources" phase from "ServU" target */,
 			);
 			path = ServU;
 			sourceTree = "<group>";

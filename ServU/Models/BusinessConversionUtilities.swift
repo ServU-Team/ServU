@@ -2,17 +2,9 @@
 //  BusinessConversionUtilities.swift
 //  ServU
 //
-//  Created by Amber Still on 7/31/25.
-//
-
-
-//
-//  BusinessConversionUtilities.swift
-//  ServU
-//
 //  Created by Quian Bowden on 6/27/25.
 //  Updated by Assistant on 7/31/25.
-//  Updated for ServUService compatibility
+//  Fixed Service to ServUService conversion to preserve deposit properties
 //
 
 import Foundation
@@ -36,7 +28,7 @@ extension Business {
             ownerId: "legacy_\(UUID().uuidString.prefix(8))",
             ownerName: "Business Owner",
             serviceCategories: [self.category],
-            services: self.services, // Now uses ServUService
+            services: self.services.map { $0.toServUService() }, // Convert all services
             availability: self.availability,
             products: [], // No products for legacy businesses
             productCategories: [],
@@ -63,7 +55,7 @@ extension EnhancedBusiness {
             isActive: self.isActive,
             location: self.location,
             contactInfo: self.contactInfo,
-            services: self.services, // Now uses ServUService
+            services: self.services.map { $0.toLegacyService() }, // Convert all services
             availability: self.availability
         )
     }
@@ -117,13 +109,18 @@ extension ServUService {
             description: self.description,
             price: self.price,
             duration: self.duration,
-            isAvailable: self.isAvailable
+            isAvailable: self.isAvailable,
+            requiresDeposit: self.requiresDeposit,
+            depositAmount: self.depositAmount,
+            depositType: self.depositType,
+            depositPolicy: self.depositPolicy
         )
     }
 }
 
 extension Service {
     /// Converts legacy Service to ServUService model
+    /// ✅ FIXED: Now preserves all deposit-related properties
     func toServUService() -> ServUService {
         return ServUService(
             name: self.name,
@@ -131,7 +128,10 @@ extension Service {
             price: self.price,
             duration: self.duration,
             isAvailable: self.isAvailable,
-            requiresDeposit: false // Default to no deposit for legacy services
+            requiresDeposit: self.requiresDeposit,
+            depositAmount: self.depositAmount,
+            depositType: self.depositType,
+            depositPolicy: self.depositPolicy
         )
     }
 }
@@ -299,7 +299,7 @@ extension Booking {
             return true
         case .depositPaid:
             return !service.requiresDeposit // If no deposit required, need full payment
-        case .fullyPaid, .refunded, .failed:
+        case .fullyPaid, .refunded, .failed, .notRequired:
             return false
         }
     }
@@ -317,6 +317,44 @@ extension Booking {
             return "Refunded"
         case .failed:
             return "Payment Failed - Retry"
+        case .notRequired:
+            return "No Payment Required"
         }
+    }
+}
+
+// MARK: - Platform Fee Configuration (NEW)
+struct PlatformFeeConfig {
+    static let serviceFeePercentage: Double = 5.0 // 5% platform fee
+    static let stripeFeePercentage: Double = 2.9 // 2.9% Stripe fee
+    static let stripeFeeFixed: Double = 0.30 // $0.30 Stripe fixed fee
+    
+    /// Calculates platform fee for a given amount
+    static func calculatePlatformFee(for amount: Double) -> Double {
+        return amount * (serviceFeePercentage / 100.0)
+    }
+    
+    /// Calculates Stripe processing fee for a given amount
+    static func calculateStripeFee(for amount: Double) -> Double {
+        return (amount * (stripeFeePercentage / 100.0)) + stripeFeeFixed
+    }
+    
+    /// Calculates total fees (platform + Stripe)
+    static func calculateTotalFees(for amount: Double) -> Double {
+        return calculatePlatformFee(for: amount) + calculateStripeFee(for: amount)
+    }
+    
+    /// Calculates how much the business owner receives after fees
+    static func calculateBusinessPayout(for amount: Double) -> Double {
+        return amount - calculateTotalFees(for: amount)
+    }
+    
+    /// Gets fee breakdown for display
+    static func getFeeBreakdown(for amount: Double) -> (platformFee: Double, stripeFee: Double, businessPayout: Double) {
+        let platformFee = calculatePlatformFee(for: amount)
+        let stripeFee = calculateStripeFee(for: amount)
+        let businessPayout = calculateBusinessPayout(for: amount)
+        
+        return (platformFee: platformFee, stripeFee: stripeFee, businessPayout: businessPayout)
     }
 }

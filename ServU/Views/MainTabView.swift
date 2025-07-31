@@ -12,6 +12,7 @@
 //
 //  Created by Quian Bowden on 7/29/25.
 //  Updated by Assistant on 7/31/25.
+//  Added shared cart manager for product functionality
 //
 
 import SwiftUI
@@ -20,6 +21,7 @@ struct MainTabView: View {
     @ObservedObject var msalManager: MSALManager
     @StateObject private var userProfile = UserProfile()
     @StateObject private var graphService: GraphAPIService
+    @StateObject private var sharedCartManager = ShoppingCartManager() // ✅ ADDED: Shared cart manager
     
     @State private var selectedTab: AppTab = .home
     @State private var isLoadingProfile = false
@@ -64,7 +66,7 @@ struct MainTabView: View {
                     .tag(AppTab.myServ)
                 
                 // Home Tab (with integrated search)
-                EnhancedHomeView(userProfile: userProfile)
+                EnhancedHomeView(userProfile: userProfile, cartManager: sharedCartManager) // ✅ ADDED: Pass cart manager
                     .tabItem {
                         VStack {
                             Image(systemName: "house.fill")
@@ -79,11 +81,25 @@ struct MainTabView: View {
                     .tag(AppTab.home)
                 
                 // Cart Tab
-                CartView(userProfile: userProfile)
+                CartView(userProfile: userProfile, cartManager: sharedCartManager) // ✅ ADDED: Pass cart manager
                     .tabItem {
                         VStack {
-                            Image(systemName: selectedTab == .cart ? "cart.fill" : "cart")
-                                .font(.system(size: 20))
+                            ZStack {
+                                Image(systemName: selectedTab == .cart ? "cart.fill" : "cart")
+                                    .font(.system(size: 20))
+                                
+                                // Cart badge
+                                if sharedCartManager.itemCount > 0 {
+                                    Text("\(sharedCartManager.itemCount)")
+                                        .font(.caption2)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                        .frame(width: 16, height: 16)
+                                        .background(Color.red)
+                                        .clipShape(Circle())
+                                        .offset(x: 8, y: -8)
+                                }
+                            }
                             Text("CART")
                                 .font(.caption2)
                                 .fontWeight(.semibold)
@@ -314,8 +330,10 @@ struct MyServView: View {
     }
 }
 
+// MARK: - Updated CartView
 struct CartView: View {
     @ObservedObject var userProfile: UserProfile
+    @ObservedObject var cartManager: ShoppingCartManager // ✅ ADDED: Accept cart manager
     
     var body: some View {
         NavigationView {
@@ -326,26 +344,147 @@ struct CartView: View {
                     .foregroundColor(userProfile.college?.primaryColor ?? .blue)
                     .padding(.top, 20)
                 
-                VStack(spacing: 20) {
-                    Image(systemName: "cart.circle.fill")
-                        .font(.system(size: 80))
-                        .foregroundColor(.gray.opacity(0.5))
+                if cartManager.items.isEmpty {
+                    VStack(spacing: 20) {
+                        Image(systemName: "cart.circle.fill")
+                            .font(.system(size: 80))
+                            .foregroundColor(.gray.opacity(0.5))
+                        
+                        Text("Your cart is empty")
+                            .font(.title2)
+                            .foregroundColor(.secondary)
+                        
+                        Text("Add services to your cart to book appointments or make purchases!")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 40)
+                    }
+                } else {
+                    // Show cart items
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            ForEach(cartManager.items) { item in
+                                CartItemRow(item: item, cartManager: cartManager, userProfile: userProfile)
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                    }
                     
-                    Text("Your cart is empty")
-                        .font(.title2)
-                        .foregroundColor(.secondary)
-                    
-                    Text("Add services to your cart to book appointments or make purchases!")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
+                    // Cart summary
+                    VStack(spacing: 16) {
+                        HStack {
+                            Text("Subtotal:")
+                                .font(.headline)
+                            Spacer()
+                            Text(cartManager.formattedSubtotal)
+                                .font(.headline)
+                                .fontWeight(.bold)
+                        }
+                        
+                        if cartManager.shippingCost > 0 {
+                            HStack {
+                                Text("Shipping:")
+                                    .font(.subheadline)
+                                Spacer()
+                                Text(cartManager.formattedShippingCost)
+                                    .font(.subheadline)
+                            }
+                        }
+                        
+                        Divider()
+                        
+                        HStack {
+                            Text("Total:")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                            Spacer()
+                            Text(cartManager.formattedTotal)
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(userProfile.college?.primaryColor ?? .blue)
+                        }
+                        
+                        Button("Proceed to Checkout") {
+                            // TODO: Implement checkout
+                        }
+                        .buttonStyle(ServUPrimaryButtonStyle(backgroundColor: userProfile.college?.primaryColor ?? .blue))
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 40)
                 }
                 
                 Spacer()
             }
             .navigationBarHidden(true)
         }
+    }
+}
+
+// MARK: - Cart Item Row
+struct CartItemRow: View {
+    let item: CartItem
+    @ObservedObject var cartManager: ShoppingCartManager
+    @ObservedObject var userProfile: UserProfile
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Product image placeholder
+            Rectangle()
+                .fill(Color(.systemGray5))
+                .frame(width: 60, height: 60)
+                .cornerRadius(8)
+                .overlay(
+                    Image(systemName: item.product.category.icon)
+                        .font(.title3)
+                        .foregroundColor(.gray)
+                )
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.displayName)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .lineLimit(2)
+                
+                Text(String(format: "$%.2f each", item.unitPrice))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            VStack(alignment: .trailing, spacing: 8) {
+                HStack(spacing: 8) {
+                    Button(action: {
+                        cartManager.updateQuantity(for: item, quantity: item.quantity - 1)
+                    }) {
+                        Image(systemName: "minus.circle.fill")
+                            .foregroundColor(.gray)
+                    }
+                    .disabled(item.quantity <= 1)
+                    
+                    Text("\(item.quantity)")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .frame(minWidth: 20)
+                    
+                    Button(action: {
+                        cartManager.updateQuantity(for: item, quantity: item.quantity + 1)
+                    }) {
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundColor(userProfile.college?.primaryColor ?? .blue)
+                    }
+                }
+                
+                Text(String(format: "$%.2f", item.totalPrice))
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+            }
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .servUCardShadow()
     }
 }
 
