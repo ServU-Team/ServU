@@ -1,3 +1,4 @@
+
 //
 //  BusinessConversionUtilities.swift
 //  ServU
@@ -268,57 +269,6 @@ extension ServiceCategory {
             return [.other]
         case .other:
             return [.other]
-        }
-    }
-}
-
-// MARK: - Booking Utilities
-extension Booking {
-    /// Gets formatted deposit amount
-    var formattedDepositAmount: String {
-        if requiresDeposit {
-            return String(format: "$%.2f", depositAmount)
-        }
-        return "$0.00"
-    }
-    
-    /// Gets formatted remaining balance
-    var formattedRemainingBalance: String {
-        return String(format: "$%.2f", remainingBalance)
-    }
-    
-    /// Gets formatted total price
-    var formattedTotalPrice: String {
-        return String(format: "$%.2f", totalPrice)
-    }
-    
-    /// Checks if booking requires payment action
-    var requiresPaymentAction: Bool {
-        switch paymentStatus {
-        case .pending:
-            return true
-        case .depositPaid:
-            return !service.requiresDeposit // If no deposit required, need full payment
-        case .fullyPaid, .refunded, .failed, .notRequired:
-            return false
-        }
-    }
-    
-    /// Gets next payment action description
-    var nextPaymentAction: String {
-        switch paymentStatus {
-        case .pending:
-            return service.requiresDeposit ? "Pay Deposit" : "Pay Full Amount"
-        case .depositPaid:
-            return "Pay Remaining Balance"
-        case .fullyPaid:
-            return "Paid in Full"
-        case .refunded:
-            return "Refunded"
-        case .failed:
-            return "Payment Failed - Retry"
-        case .notRequired:
-            return "No Payment Required"
         }
     }
 }
