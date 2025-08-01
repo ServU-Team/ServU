@@ -12,14 +12,15 @@
 //
 //  Created by Quian Bowden on 7/29/25.
 //  Updated by Assistant on 7/31/25.
-//  Added cartManager parameter for product functionality
+//  Fixed corner radius implementation and UIKit compatibility
 //
 
 import SwiftUI
+import UIKit
 
 struct EnhancedHomeView: View {
     @ObservedObject var userProfile: UserProfile
-    @ObservedObject var cartManager: ShoppingCartManager // ✅ ADDED: Accept cart manager parameter
+    @ObservedObject var cartManager: ShoppingCartManager
     @StateObject private var businessData = EnhancedBusinessDataService()
     
     @State private var selectedCategory: ServiceCategory? = nil
@@ -49,7 +50,7 @@ struct EnhancedHomeView: View {
             .navigationBarHidden(true)
             .background(backgroundGradient)
             .sheet(isPresented: $showingSearch) {
-                SearchView(userProfile: userProfile, cartManager: cartManager) // ✅ ADDED: Pass cart manager
+                SearchView(userProfile: userProfile, cartManager: cartManager)
             }
         }
         .onAppear {
@@ -181,7 +182,7 @@ struct EnhancedHomeView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 16) {
                     ForEach(filteredPopularBusinesses) { business in
-                        PopularBusinessCard(business: business, userProfile: userProfile, cartManager: cartManager) // ✅ ADDED: Pass cart manager
+                        PopularBusinessCard(business: business, userProfile: userProfile, cartManager: cartManager)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -206,7 +207,7 @@ struct EnhancedHomeView: View {
             // Featured service cards
             VStack(spacing: 16) {
                 ForEach(filteredFeaturedBusinesses) { business in
-                    FeaturedBusinessCard(business: business, userProfile: userProfile, cartManager: cartManager) // ✅ ADDED: Pass cart manager
+                    FeaturedBusinessCard(business: business, userProfile: userProfile, cartManager: cartManager)
                         .padding(.horizontal, 20)
                 }
             }
@@ -264,7 +265,7 @@ struct EnhancedHomeView: View {
 // MARK: - Updated Search View (Full Screen Modal)
 struct SearchView: View {
     @ObservedObject var userProfile: UserProfile
-    @ObservedObject var cartManager: ShoppingCartManager // ✅ ADDED: Accept cart manager parameter
+    @ObservedObject var cartManager: ShoppingCartManager
     @StateObject private var businessData = EnhancedBusinessDataService()
     @State private var searchText = ""
     @Environment(\.presentationMode) var presentationMode
@@ -316,7 +317,7 @@ struct SearchView: View {
                     }
                 } else {
                     List(businessData.searchBusinesses(query: searchText)) { business in
-                        BusinessSearchRow(business: business, userProfile: userProfile, cartManager: cartManager) // ✅ ADDED: Pass cart manager
+                        BusinessSearchRow(business: business, userProfile: userProfile, cartManager: cartManager)
                     }
                     .listStyle(PlainListStyle())
                 }
@@ -339,7 +340,7 @@ struct SearchView: View {
 struct BusinessSearchRow: View {
     let business: EnhancedBusiness
     @ObservedObject var userProfile: UserProfile
-    @ObservedObject var cartManager: ShoppingCartManager // ✅ ADDED: Accept cart manager parameter
+    @ObservedObject var cartManager: ShoppingCartManager
     @State private var showingBusinessDetail = false
     @State private var showingProductList = false
     
@@ -409,7 +410,7 @@ struct BusinessSearchRow: View {
             }
         }
         .sheet(isPresented: $showingProductList) {
-            ProductListView(business: business, userProfile: userProfile, cartManager: cartManager) // ✅ ADDED: Pass cart manager
+            ProductListView(business: business, userProfile: userProfile, cartManager: cartManager)
         }
     }
     
@@ -429,7 +430,7 @@ struct BusinessSearchRow: View {
     }
 }
 
-// MARK: - Category Tab Component (unchanged but using proper colors)
+// MARK: - Category Tab Component
 struct CategoryTab: View {
     let category: ServiceCategory?
     let selectedCategory: ServiceCategory?
@@ -482,11 +483,11 @@ struct CategoryTab: View {
     }
 }
 
-// MARK: - Popular Business Card (updated with cart manager)
+// MARK: - Popular Business Card
 struct PopularBusinessCard: View {
     let business: EnhancedBusiness
     @ObservedObject var userProfile: UserProfile
-    @ObservedObject var cartManager: ShoppingCartManager // ✅ ADDED: Accept cart manager parameter
+    @ObservedObject var cartManager: ShoppingCartManager
     @State private var showingBusinessDetail = false
     @State private var showingProductList = false
     
@@ -556,7 +557,7 @@ struct PopularBusinessCard: View {
             }
         }
         .sheet(isPresented: $showingProductList) {
-            ProductListView(business: business, userProfile: userProfile, cartManager: cartManager) // ✅ ADDED: Pass cart manager
+            ProductListView(business: business, userProfile: userProfile, cartManager: cartManager)
         }
     }
     
@@ -599,11 +600,11 @@ struct PopularBusinessCard: View {
     }
 }
 
-// MARK: - Featured Business Card (updated with cart manager)
+// MARK: - Featured Business Card
 struct FeaturedBusinessCard: View {
     let business: EnhancedBusiness
     @ObservedObject var userProfile: UserProfile
-    @ObservedObject var cartManager: ShoppingCartManager // ✅ ADDED: Accept cart manager parameter
+    @ObservedObject var cartManager: ShoppingCartManager
     @State private var showingBusinessDetail = false
     @State private var showingProductList = false
     
@@ -614,7 +615,7 @@ struct FeaturedBusinessCard: View {
                 Rectangle()
                     .fill(LinearGradient(colors: [Color(red: 1.0, green: 0.84, blue: 0.0), Color.orange], startPoint: .topLeading, endPoint: .bottomTrailing))
                     .frame(height: 200)
-                    .cornerRadius(16, corners: [.topLeft, .topRight])
+                    .clipShape(RoundedCorner.topCorners(radius: 16))
                     .overlay(
                         VStack {
                             Spacer()
@@ -652,15 +653,11 @@ struct FeaturedBusinessCard: View {
                     }
                 }
                 .padding(16)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, corners: [.bottomLeft, .bottomRight])
-                        .fill(Color(red: 1.0, green: 0.84, blue: 0.0))
-                )
+                .background(Color(red: 1.0, green: 0.84, blue: 0.0))
+                .clipShape(RoundedCorner.bottomCorners(radius: 16))
             }
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(red: 1.0, green: 0.84, blue: 0.0))
-            )
+            .background(Color(red: 1.0, green: 0.84, blue: 0.0))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
             .shadow(color: Color.black.opacity(0.15), radius: 12, x: 0, y: 6)
         }
         .sheet(isPresented: $showingBusinessDetail) {
@@ -669,7 +666,7 @@ struct FeaturedBusinessCard: View {
             }
         }
         .sheet(isPresented: $showingProductList) {
-            ProductListView(business: business, userProfile: userProfile, cartManager: cartManager) // ✅ ADDED: Pass cart manager
+            ProductListView(business: business, userProfile: userProfile, cartManager: cartManager)
         }
     }
     

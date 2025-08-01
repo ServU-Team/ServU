@@ -7,11 +7,12 @@
 
 
 //
-//  SwiftUIExtensions.swift
+//  RoundedCorner.swift
 //  ServU
 //
-//  Created by Quian Bowden on 7/19/25.
+//  Created by Quian Bowden on 7/31/25.
 //  Updated by Assistant on 7/31/25.
+//  Fixed UIKit import and corner radius implementation
 //
 
 import SwiftUI
@@ -36,6 +37,35 @@ struct RoundedCorner: Shape {
             cornerRadii: CGSize(width: radius, height: radius)
         )
         return Path(path.cgPath)
+    }
+}
+
+// MARK: - Additional RoundedCorner Convenience Initializers
+extension RoundedCorner {
+    /// Creates a rounded corner shape with specific corners
+    init(radius: CGFloat, corners: UIRectCorner) {
+        self.radius = radius
+        self.corners = corners
+    }
+    
+    /// Creates a rounded corner shape for top corners only
+    static func topCorners(radius: CGFloat) -> RoundedCorner {
+        return RoundedCorner(radius: radius, corners: [.topLeft, .topRight])
+    }
+    
+    /// Creates a rounded corner shape for bottom corners only
+    static func bottomCorners(radius: CGFloat) -> RoundedCorner {
+        return RoundedCorner(radius: radius, corners: [.bottomLeft, .bottomRight])
+    }
+    
+    /// Creates a rounded corner shape for left corners only
+    static func leftCorners(radius: CGFloat) -> RoundedCorner {
+        return RoundedCorner(radius: radius, corners: [.topLeft, .bottomLeft])
+    }
+    
+    /// Creates a rounded corner shape for right corners only
+    static func rightCorners(radius: CGFloat) -> RoundedCorner {
+        return RoundedCorner(radius: radius, corners: [.topRight, .bottomRight])
     }
 }
 
