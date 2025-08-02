@@ -11,23 +11,25 @@
 //  ServU
 //
 //  Created by Quian Bowden on 7/31/25.
-//  Updated by Assistant on 8/1/25.
-//  Integrated with real Stripe payment processing
+//  Enhanced with real Stripe Payment Sheet integration
 //
 
 import Foundation
 import SwiftUI
+import StripePaymentSheet
 
-// MARK: - Payment Manager (Updated with Real Stripe Integration)
+// MARK: - Payment Manager (Enhanced with Real Stripe Integration)
+@MainActor
 class PaymentManager: ObservableObject {
     @Published var isProcessingPayment = false
     @Published var paymentError: String?
     @Published var showingPaymentSheet = false
-    @Published var currentPaymentIntent: PaymentIntent?
+    @Published var currentPaymentSheet: PaymentSheet?
+    @Published var paymentResult: PaymentSheetResult?
     
     private let stripeService = StripePaymentService()
     
-    // MARK: - Public Methods
+    // MARK: - Service Payment Methods
     
     func processDepositPayment(for booking: Booking, completion: @escaping (Bool, String?) -> Void) {
         isProcessingPayment = true
@@ -38,20 +40,19 @@ class PaymentManager: ObservableObject {
         stripeService.createDepositPaymentIntent(for: booking) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let paymentIntent):
-                    self?.currentPaymentIntent = paymentIntent
+                case .success(let paymentSheet):
+                    self?.currentPaymentSheet = paymentSheet
                     self?.showingPaymentSheet = true
                     self?.isProcessingPayment = false
                     
-                    // In a real app, this would trigger the Stripe payment sheet
-                    // For now, we'll simulate successful payment after payment intent creation
-                    self?.simulatePaymentSuccess(paymentIntent: paymentIntent, completion: completion)
+                    // The payment sheet will be presented by the view
+                    // Completion will be handled in onPaymentCompletion
                     
                 case .failure(let error):
                     self?.paymentError = error.localizedDescription
                     self?.isProcessingPayment = false
                     print("❌ DEBUG: Deposit payment failed: \(error.localizedDescription)")
-                    completion(false, nil)
+                    completion(false, error.localizedDescription)
                 }
             }
         }
@@ -66,18 +67,16 @@ class PaymentManager: ObservableObject {
         stripeService.createFullPaymentIntent(for: booking) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let paymentIntent):
-                    self?.currentPaymentIntent = paymentIntent
+                case .success(let paymentSheet):
+                    self?.currentPaymentSheet = paymentSheet
                     self?.showingPaymentSheet = true
                     self?.isProcessingPayment = false
-                    
-                    self?.simulatePaymentSuccess(paymentIntent: paymentIntent, completion: completion)
                     
                 case .failure(let error):
                     self?.paymentError = error.localizedDescription
                     self?.isProcessingPayment = false
                     print("❌ DEBUG: Full payment failed: \(error.localizedDescription)")
-                    completion(false, nil)
+                    completion(false, error.localizedDescription)
                 }
             }
         }
@@ -92,237 +91,157 @@ class PaymentManager: ObservableObject {
         stripeService.createRemainingBalancePaymentIntent(for: booking) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let paymentIntent):
-                    self?.currentPaymentIntent = paymentIntent
+                case .success(let paymentSheet):
+                    self?.currentPaymentSheet = paymentSheet
                     self?.showingPaymentSheet = true
                     self?.isProcessingPayment = false
-                    
-                    self?.simulatePaymentSuccess(paymentIntent: paymentIntent, completion: completion)
                     
                 case .failure(let error):
                     self?.paymentError = error.localizedDescription
                     self?.isProcessingPayment = false
                     print("❌ DEBUG: Remaining balance payment failed: \(error.localizedDescription)")
-                    completion(false, nil)
+                    completion(false, error.localizedDescription)
                 }
             }
         }
     }
+    
+    // MARK: - Product Payment Methods
     
     func processProductPayment(for cartItems: [CartItem], shipping: ShippingOption?, completion: @escaping (Bool, String?) -> Void) {
         isProcessingPayment = true
         paymentError = nil
         
-        print("✅ DEBUG: Starting product payment for \(cartItems.count) items")
+        let productNames = cartItems.map { $0.product.name }.joined(separator: ", ")
+        print("✅ DEBUG: Starting product payment for: \(productNames)")
         
         stripeService.createProductPaymentIntent(for: cartItems, shipping: shipping) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let paymentIntent):
-                    self?.currentPaymentIntent = paymentIntent
+                case .success(let paymentSheet):
+                    self?.currentPaymentSheet = paymentSheet
                     self?.showingPaymentSheet = true
                     self?.isProcessingPayment = false
-                    
-                    self?.simulatePaymentSuccess(paymentIntent: paymentIntent, completion: completion)
                     
                 case .failure(let error):
                     self?.paymentError = error.localizedDescription
                     self?.isProcessingPayment = false
                     print("❌ DEBUG: Product payment failed: \(error.localizedDescription)")
-                    completion(false, nil)
+                    completion(false, error.localizedDescription)
                 }
             }
         }
     }
     
-    func refundPayment(paymentIntentId: String, amount: Double? = nil, reason: RefundReason = .requestedByCustomer, completion: @escaping (Bool) -> Void) {
-        isProcessingPayment = true
+    // MARK: - Payment Sheet Handling
+    
+    func onPaymentCompletion(result: PaymentSheetResult) {
+        paymentResult = result
+        showingPaymentSheet = false
+        
+        switch result {
+        case .completed:
+            print("✅ Payment completed successfully")
+            // Handle successful payment
+            handlePaymentSuccess()
+            
+        case .canceled:
+            print("⚠️ Payment was canceled")
+            paymentError = "Payment was canceled"
+            
+        case .failed(let error):
+            print("❌ Payment failed: \(error)")
+            paymentError = error.localizedDescription
+        }
+    }
+    
+    private func handlePaymentSuccess() {
+        // Update local state, sync with backend, etc.
+        // This will be expanded when we implement webhooks
         paymentError = nil
         
-        print("✅ DEBUG: Starting refund for payment intent: \(paymentIntentId)")
-        
-        stripeService.createRefund(paymentIntentId: paymentIntentId, amount: amount, reason: reason) { [weak self] result in
-            DispatchQueue.main.async {
-                self?.isProcessingPayment = false
-                
-                switch result {
-                case .success(let refund):
-                    print("✅ DEBUG: Refund successful: \(refund.id)")
-                    completion(true)
-                    
-                case .failure(let error):
-                    self?.paymentError = error.localizedDescription
-                    print("❌ DEBUG: Refund failed: \(error.localizedDescription)")
-                    completion(false)
-                }
+        // You can add additional success handling here
+        // For example, updating booking status, sending confirmations, etc.
+    }
+    
+    // MARK: - Utility Methods
+    
+    func resetPaymentState() {
+        isProcessingPayment = false
+        paymentError = nil
+        showingPaymentSheet = false
+        currentPaymentSheet = nil
+        paymentResult = nil
+    }
+    
+    func getPaymentStatusMessage() -> String {
+        if isProcessingPayment {
+            return "Processing payment..."
+        } else if let error = paymentError {
+            return "Payment error: \(error)"
+        } else if let result = paymentResult {
+            switch result {
+            case .completed:
+                return "Payment completed successfully!"
+            case .canceled:
+                return "Payment was canceled"
+            case .failed(let error):
+                return "Payment failed: \(error.localizedDescription)"
             }
-        }
-    }
-    
-    // MARK: - Private Methods
-    
-    /// Simulates payment success for development/testing
-    /// In production, this would be handled by Stripe's payment sheet completion
-    private func simulatePaymentSuccess(paymentIntent: PaymentIntent, completion: @escaping (Bool, String?) -> Void) {
-        // Simulate payment processing time
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            // In a real app, you would confirm the payment with the user's payment method
-            // and get the actual transaction ID from Stripe
-            let transactionId = "pi_\(paymentIntent.id.suffix(8))"
-            
-            print("✅ DEBUG: Payment successful - Transaction ID: \(transactionId)")
-            completion(true, transactionId)
-        }
-    }
-    
-    /// Confirms payment with user's payment method (called by payment sheet)
-    func confirmPayment(with paymentMethodId: String, completion: @escaping (Bool, String?) -> Void) {
-        guard let paymentIntent = currentPaymentIntent else {
-            completion(false, nil)
-            return
-        }
-        
-        stripeService.confirmPayment(intentId: paymentIntent.id, paymentMethodId: paymentMethodId) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let confirmation):
-                    if confirmation.status == "succeeded" {
-                        completion(true, confirmation.id)
-                    } else {
-                        completion(false, nil)
-                    }
-                    
-                case .failure(let error):
-                    self.paymentError = error.localizedDescription
-                    completion(false, nil)
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Transaction Model (Enhanced)
-struct Transaction: Identifiable {
-    let id = UUID()
-    let transactionId: String
-    let paymentIntentId: String? // Stripe payment intent ID
-    let bookingId: UUID?
-    let productOrderId: UUID?
-    let amount: Double
-    let type: TransactionType
-    let status: TransactionStatus
-    let createdAt: Date
-    let processedAt: Date?
-    let paymentMethod: PaymentMethodSummary?
-    let refundInfo: RefundInfo?
-    
-    init(transactionId: String, paymentIntentId: String? = nil, bookingId: UUID? = nil, productOrderId: UUID? = nil, amount: Double, type: TransactionType, status: TransactionStatus = .pending, paymentMethod: PaymentMethodSummary? = nil) {
-        self.transactionId = transactionId
-        self.paymentIntentId = paymentIntentId
-        self.bookingId = bookingId
-        self.productOrderId = productOrderId
-        self.amount = amount
-        self.type = type
-        self.status = status
-        self.createdAt = Date()
-        self.processedAt = status == .completed ? Date() : nil
-        self.paymentMethod = paymentMethod
-        self.refundInfo = nil
-    }
-}
-
-// MARK: - Payment Method Summary
-struct PaymentMethodSummary {
-    let type: String // "card", "apple_pay", etc.
-    let brand: String? // "visa", "mastercard", etc.
-    let last4: String?
-    let expiryMonth: Int?
-    let expiryYear: Int?
-    
-    var displayText: String {
-        if let brand = brand, let last4 = last4 {
-            return "\(brand.capitalized) •••• \(last4)"
-        } else if let last4 = last4 {
-            return "•••• \(last4)"
         } else {
-            return type.capitalized
+            return "Ready to process payment"
+        }
+    }
+    
+    // MARK: - Fee Calculations
+    
+    func calculateTotalWithFees(for amount: Double) -> (subtotal: Double, platformFee: Double, stripeFee: Double, total: Double) {
+        let platformFee = PlatformFeeConfig.calculatePlatformFee(for: amount)
+        let stripeFee = PlatformFeeConfig.calculateStripeFee(for: amount)
+        let total = amount + platformFee + stripeFee
+        
+        return (subtotal: amount, platformFee: platformFee, stripeFee: stripeFee, total: total)
+    }
+    
+    func calculateBusinessPayout(for amount: Double) -> Double {
+        return PlatformFeeConfig.calculateBusinessPayout(for: amount)
+    }
+}
+
+// MARK: - Payment Sheet Wrapper View
+struct PaymentSheetWrapper: UIViewControllerRepresentable {
+    @Binding var paymentSheet: PaymentSheet?
+    @Binding var showingPaymentSheet: Bool
+    let onCompletion: (PaymentSheetResult) -> Void
+    
+    func makeUIViewController(context: Context) -> UIViewController {
+        return UIViewController()
+    }
+    
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        if showingPaymentSheet, let paymentSheet = paymentSheet {
+            paymentSheet.present(from: uiViewController) { [weak uiViewController] result in
+                DispatchQueue.main.async {
+                    self.onCompletion(result)
+                }
+            }
         }
     }
 }
 
-// MARK: - Refund Info
-struct RefundInfo {
-    let refundId: String
-    let amount: Double
-    let reason: RefundReason
-    let status: String
-    let createdAt: Date
-}
-
-// MARK: - Enhanced Transaction Type
-enum TransactionType: String, CaseIterable {
-    case deposit = "Deposit"
-    case fullPayment = "Full Payment"
-    case remainingBalance = "Remaining Balance"
-    case productPurchase = "Product Purchase"
-    case refund = "Refund"
-    case partialRefund = "Partial Refund"
-    
-    var displayName: String {
-        return self.rawValue
-    }
-    
-    var icon: String {
-        switch self {
-        case .deposit: return "creditcard"
-        case .fullPayment: return "checkmark.circle.fill"
-        case .remainingBalance: return "plus.circle"
-        case .productPurchase: return "bag.fill"
-        case .refund: return "arrow.counterclockwise"
-        case .partialRefund: return "arrow.counterclockwise.circle"
-        }
-    }
-    
-    var color: Color {
-        switch self {
-        case .deposit: return .blue
-        case .fullPayment: return .green
-        case .remainingBalance: return .orange
-        case .productPurchase: return .purple
-        case .refund, .partialRefund: return .red
-        }
-    }
-}
-
-// MARK: - Enhanced Transaction Status
-enum TransactionStatus: String, CaseIterable {
-    case pending = "Pending"
-    case processing = "Processing"
-    case completed = "Completed"
-    case failed = "Failed"
-    case cancelled = "Cancelled"
-    case refunded = "Refunded"
-    case partiallyRefunded = "Partially Refunded"
-    
-    var color: Color {
-        switch self {
-        case .pending: return .orange
-        case .processing: return .blue
-        case .completed: return .green
-        case .failed: return .red
-        case .cancelled: return .gray
-        case .refunded, .partiallyRefunded: return .purple
-        }
-    }
-    
-    var icon: String {
-        switch self {
-        case .pending: return "clock"
-        case .processing: return "arrow.clockwise"
-        case .completed: return "checkmark.circle.fill"
-        case .failed: return "xmark.circle"
-        case .cancelled: return "xmark.circle.fill"
-        case .refunded, .partiallyRefunded: return "arrow.counterclockwise"
-        }
+// MARK: - SwiftUI Integration Extension
+extension View {
+    func paymentSheet(
+        isPresented: Binding<Bool>,
+        paymentSheet: Binding<PaymentSheet?>,
+        onCompletion: @escaping (PaymentSheetResult) -> Void
+    ) -> some View {
+        self.background(
+            PaymentSheetWrapper(
+                paymentSheet: paymentSheet,
+                showingPaymentSheet: isPresented,
+                onCompletion: onCompletion
+            )
+        )
     }
 }

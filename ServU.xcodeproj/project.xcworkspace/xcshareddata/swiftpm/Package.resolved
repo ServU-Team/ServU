@@ -1,5 +1,5 @@
 {
-  "originHash" : "0210b0d8bdf78f3ea275a5e0688a6bda67366a571df9b9fc7728e8d3a46f78a2",
+  "originHash" : "10825b0c26679856fadebbfdbcc0dbaa0179b1945e694605a4040ae0a9cdd798",
   "pins" : [
     {
       "identity" : "microsoft-authentication-library-for-objc",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "d80d943d4541f7c015b93b77f7384681e3e55294",
         "version" : "2.1.0"
+      }
+    },
+    {
+      "identity" : "stripe-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/stripe/stripe-ios",
+      "state" : {
+        "revision" : "4fc35327b6db771d6a9861963e815a9e434cbc99",
+        "version" : "24.18.1"
       }
     }
   ],

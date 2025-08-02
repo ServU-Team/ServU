@@ -797,3 +797,17 @@ class ShoppingCartManager: ObservableObject {
         selectedShippingOption = nil
     }
 }
+
+// MARK: - Codable Conformance Extensions
+extension ProductVariant: Codable {}
+extension VariantAttribute: Codable {}
+extension ProductInventory: Codable {}
+extension ProductSpecification: Codable {}
+extension ProductImage: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case id, imageURL, isPrimary, altText
+    }
+}
+extension Product: Codable {}
+extension ShippingOption: Codable {}
+extension CartItem: Codable {}
