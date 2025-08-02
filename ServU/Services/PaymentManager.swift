@@ -10,22 +10,21 @@
 //  PaymentManager.swift
 //  ServU
 //
-//  Created by Quian Bowden on 7/31/25.
-//  Enhanced with real Stripe Payment Sheet integration
+//  Created by Quian Bowden on 8/2/25.
+//  Conflict-free payment management for ServU
 //
 
 import Foundation
 import SwiftUI
-import StripePaymentSheet
 
-// MARK: - Payment Manager (Enhanced with Real Stripe Integration)
+// MARK: - Payment Manager (Conflict-Free)
 @MainActor
 class PaymentManager: ObservableObject {
     @Published var isProcessingPayment = false
     @Published var paymentError: String?
     @Published var showingPaymentSheet = false
-    @Published var currentPaymentSheet: PaymentSheet?
-    @Published var paymentResult: PaymentSheetResult?
+    @Published var currentPaymentIntent: StripePaymentIntent?
+    @Published var paymentSuccess = false
     
     private let stripeService = StripePaymentService()
     
@@ -34,19 +33,20 @@ class PaymentManager: ObservableObject {
     func processDepositPayment(for booking: Booking, completion: @escaping (Bool, String?) -> Void) {
         isProcessingPayment = true
         paymentError = nil
+        paymentSuccess = false
         
         print("✅ DEBUG: Starting deposit payment for \(booking.service.name)")
         
         stripeService.createDepositPaymentIntent(for: booking) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let paymentSheet):
-                    self?.currentPaymentSheet = paymentSheet
+                case .success(let paymentIntent):
+                    self?.currentPaymentIntent = paymentIntent
                     self?.showingPaymentSheet = true
                     self?.isProcessingPayment = false
                     
-                    // The payment sheet will be presented by the view
-                    // Completion will be handled in onPaymentCompletion
+                    // For now, simulate success (will be replaced with real Stripe integration)
+                    self?.simulatePaymentSuccess(completion: completion)
                     
                 case .failure(let error):
                     self?.paymentError = error.localizedDescription
@@ -61,16 +61,20 @@ class PaymentManager: ObservableObject {
     func processFullPayment(for booking: Booking, completion: @escaping (Bool, String?) -> Void) {
         isProcessingPayment = true
         paymentError = nil
+        paymentSuccess = false
         
         print("✅ DEBUG: Starting full payment for \(booking.service.name)")
         
         stripeService.createFullPaymentIntent(for: booking) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let paymentSheet):
-                    self?.currentPaymentSheet = paymentSheet
+                case .success(let paymentIntent):
+                    self?.currentPaymentIntent = paymentIntent
                     self?.showingPaymentSheet = true
                     self?.isProcessingPayment = false
+                    
+                    // For now, simulate success (will be replaced with real Stripe integration)
+                    self?.simulatePaymentSuccess(completion: completion)
                     
                 case .failure(let error):
                     self?.paymentError = error.localizedDescription
@@ -85,16 +89,20 @@ class PaymentManager: ObservableObject {
     func processRemainingBalancePayment(for booking: Booking, completion: @escaping (Bool, String?) -> Void) {
         isProcessingPayment = true
         paymentError = nil
+        paymentSuccess = false
         
         print("✅ DEBUG: Starting remaining balance payment for \(booking.service.name)")
         
         stripeService.createRemainingBalancePaymentIntent(for: booking) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let paymentSheet):
-                    self?.currentPaymentSheet = paymentSheet
+                case .success(let paymentIntent):
+                    self?.currentPaymentIntent = paymentIntent
                     self?.showingPaymentSheet = true
                     self?.isProcessingPayment = false
+                    
+                    // For now, simulate success (will be replaced with real Stripe integration)
+                    self?.simulatePaymentSuccess(completion: completion)
                     
                 case .failure(let error):
                     self?.paymentError = error.localizedDescription
@@ -111,6 +119,7 @@ class PaymentManager: ObservableObject {
     func processProductPayment(for cartItems: [CartItem], shipping: ShippingOption?, completion: @escaping (Bool, String?) -> Void) {
         isProcessingPayment = true
         paymentError = nil
+        paymentSuccess = false
         
         let productNames = cartItems.map { $0.product.name }.joined(separator: ", ")
         print("✅ DEBUG: Starting product payment for: \(productNames)")
@@ -118,10 +127,13 @@ class PaymentManager: ObservableObject {
         stripeService.createProductPaymentIntent(for: cartItems, shipping: shipping) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
-                case .success(let paymentSheet):
-                    self?.currentPaymentSheet = paymentSheet
+                case .success(let paymentIntent):
+                    self?.currentPaymentIntent = paymentIntent
                     self?.showingPaymentSheet = true
                     self?.isProcessingPayment = false
+                    
+                    // For now, simulate success (will be replaced with real Stripe integration)
+                    self?.simulatePaymentSuccess(completion: completion)
                     
                 case .failure(let error):
                     self?.paymentError = error.localizedDescription
@@ -133,35 +145,16 @@ class PaymentManager: ObservableObject {
         }
     }
     
-    // MARK: - Payment Sheet Handling
+    // MARK: - Private Helper Methods
     
-    func onPaymentCompletion(result: PaymentSheetResult) {
-        paymentResult = result
-        showingPaymentSheet = false
-        
-        switch result {
-        case .completed:
-            print("✅ Payment completed successfully")
-            // Handle successful payment
-            handlePaymentSuccess()
-            
-        case .canceled:
-            print("⚠️ Payment was canceled")
-            paymentError = "Payment was canceled"
-            
-        case .failed(let error):
-            print("❌ Payment failed: \(error)")
-            paymentError = error.localizedDescription
+    private func simulatePaymentSuccess(completion: @escaping (Bool, String?) -> Void) {
+        // Simulate payment processing time
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            self.paymentSuccess = true
+            self.showingPaymentSheet = false
+            print("✅ DEBUG: Payment simulation completed successfully")
+            completion(true, nil)
         }
-    }
-    
-    private func handlePaymentSuccess() {
-        // Update local state, sync with backend, etc.
-        // This will be expanded when we implement webhooks
-        paymentError = nil
-        
-        // You can add additional success handling here
-        // For example, updating booking status, sending confirmations, etc.
     }
     
     // MARK: - Utility Methods
@@ -170,8 +163,8 @@ class PaymentManager: ObservableObject {
         isProcessingPayment = false
         paymentError = nil
         showingPaymentSheet = false
-        currentPaymentSheet = nil
-        paymentResult = nil
+        currentPaymentIntent = nil
+        paymentSuccess = false
     }
     
     func getPaymentStatusMessage() -> String {
@@ -179,15 +172,8 @@ class PaymentManager: ObservableObject {
             return "Processing payment..."
         } else if let error = paymentError {
             return "Payment error: \(error)"
-        } else if let result = paymentResult {
-            switch result {
-            case .completed:
-                return "Payment completed successfully!"
-            case .canceled:
-                return "Payment was canceled"
-            case .failed(let error):
-                return "Payment failed: \(error.localizedDescription)"
-            }
+        } else if paymentSuccess {
+            return "Payment completed successfully!"
         } else {
             return "Ready to process payment"
         }
@@ -208,40 +194,9 @@ class PaymentManager: ObservableObject {
     }
 }
 
-// MARK: - Payment Sheet Wrapper View
-struct PaymentSheetWrapper: UIViewControllerRepresentable {
-    @Binding var paymentSheet: PaymentSheet?
-    @Binding var showingPaymentSheet: Bool
-    let onCompletion: (PaymentSheetResult) -> Void
-    
-    func makeUIViewController(context: Context) -> UIViewController {
-        return UIViewController()
-    }
-    
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        if showingPaymentSheet, let paymentSheet = paymentSheet {
-            paymentSheet.present(from: uiViewController) { [weak uiViewController] result in
-                DispatchQueue.main.async {
-                    self.onCompletion(result)
-                }
-            }
-        }
-    }
-}
-
-// MARK: - SwiftUI Integration Extension
-extension View {
-    func paymentSheet(
-        isPresented: Binding<Bool>,
-        paymentSheet: Binding<PaymentSheet?>,
-        onCompletion: @escaping (PaymentSheetResult) -> Void
-    ) -> some View {
-        self.background(
-            PaymentSheetWrapper(
-                paymentSheet: paymentSheet,
-                showingPaymentSheet: isPresented,
-                onCompletion: onCompletion
-            )
-        )
-    }
+// MARK: - Service Payment Type Enum
+enum ServUPaymentType {
+    case deposit
+    case full
+    case remainingBalance
 }

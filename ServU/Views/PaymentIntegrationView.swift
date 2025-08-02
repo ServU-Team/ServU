@@ -11,11 +11,10 @@
 //  ServU
 //
 //  Created by Quian Bowden on 8/2/25.
-//  Payment integration view component for Stripe payments
+//  Simple payment integration view for ServU
 //
 
 import SwiftUI
-import StripePaymentSheet
 
 // MARK: - Payment Integration View
 struct PaymentIntegrationView: View {
@@ -26,37 +25,22 @@ struct PaymentIntegrationView: View {
     let booking: Booking?
     let cartItems: [CartItem]?
     let shippingOption: ShippingOption?
-    let paymentType: PaymentType
-    
-    enum PaymentType {
-        case deposit(Booking)
-        case fullPayment(Booking)
-        case remainingBalance(Booking)
-        case productPurchase([CartItem], ShippingOption?)
-    }
+    let paymentType: ServUPaymentType
     
     // MARK: - Initializers
     
-    init(for booking: Booking, type: ServicePaymentType) {
+    init(for booking: Booking, type: ServUPaymentType) {
         self.booking = booking
         self.cartItems = nil
         self.shippingOption = nil
-        
-        switch type {
-        case .deposit:
-            self.paymentType = .deposit(booking)
-        case .full:
-            self.paymentType = .fullPayment(booking)
-        case .remainingBalance:
-            self.paymentType = .remainingBalance(booking)
-        }
+        self.paymentType = type
     }
     
     init(for cartItems: [CartItem], shipping: ShippingOption? = nil) {
         self.booking = nil
         self.cartItems = cartItems
         self.shippingOption = shipping
-        self.paymentType = .productPurchase(cartItems, shipping)
+        self.paymentType = .full // Product purchases are always full payments
     }
     
     var body: some View {
@@ -77,15 +61,11 @@ struct PaymentIntegrationView: View {
             if let error = paymentManager.paymentError {
                 ErrorMessageView(message: error)
             }
-        }
-        .paymentSheet(
-            isPresented: $paymentManager.showingPaymentSheet,
-            paymentSheet: $paymentManager.currentPaymentSheet,
-            onCompletion: { result in
-                paymentManager.onPaymentCompletion(result: result)
-                handlePaymentResult(result)
+            
+            if paymentManager.paymentSuccess {
+                SuccessMessageView()
             }
-        )
+        }
         .alert("Payment Result", isPresented: $showingPaymentResult) {
             Button("OK") { 
                 paymentManager.resetPaymentState()
@@ -104,15 +84,10 @@ struct PaymentIntegrationView: View {
                 .font(.headline)
                 .fontWeight(.semibold)
             
-            switch paymentType {
-            case .deposit(let booking):
-                DepositSummaryView(booking: booking)
-            case .fullPayment(let booking):
-                FullPaymentSummaryView(booking: booking)
-            case .remainingBalance(let booking):
-                RemainingBalanceSummaryView(booking: booking)
-            case .productPurchase(let items, let shipping):
-                ProductSummaryView(items: items, shipping: shipping)
+            if let booking = booking {
+                ServiceSummaryView(booking: booking, paymentType: paymentType)
+            } else if let items = cartItems {
+                ProductSummaryView(items: items, shipping: shippingOption)
             }
         }
         .padding(16)
@@ -141,13 +116,7 @@ struct PaymentIntegrationView: View {
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .background(
-                LinearGradient(
-                    gradient: Gradient(colors: [Color.servURed, Color.servURed.opacity(0.8)]),
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
+            .background(Color.servURed)
             .cornerRadius(12)
             .disabled(paymentManager.isProcessingPayment)
         }
@@ -157,85 +126,65 @@ struct PaymentIntegrationView: View {
     }
     
     private var paymentButtonTitle: String {
-        switch paymentType {
-        case .deposit:
-            return "Pay Deposit"
-        case .fullPayment:
-            return "Pay Full Amount"
-        case .remainingBalance:
-            return "Pay Remaining Balance"
-        case .productPurchase:
-            return "Complete Purchase"
+        if let booking = booking {
+            switch paymentType {
+            case .deposit:
+                return "Pay Deposit ($\(String(format: "%.2f", booking.service.calculatedDepositAmount)))"
+            case .full:
+                return "Pay Full Amount ($\(String(format: "%.2f", booking.totalPrice)))"
+            case .remainingBalance:
+                return "Pay Remaining Balance ($\(String(format: "%.2f", booking.service.remainingBalance)))"
+            }
+        } else if let items = cartItems {
+            let total = items.reduce(0) { $0 + $1.totalPrice } + (shippingOption?.price ?? 0.0)
+            return "Complete Purchase ($\(String(format: "%.2f", total)))"
+        } else {
+            return "Pay Now"
         }
     }
     
     // MARK: - Payment Actions
     
     private func initiatePayment() {
-        switch paymentType {
-        case .deposit(let booking):
-            paymentManager.processDepositPayment(for: booking) { success, error in
-                if !success {
-                    handlePaymentError(error)
+        if let booking = booking {
+            switch paymentType {
+            case .deposit:
+                paymentManager.processDepositPayment(for: booking) { success, error in
+                    handlePaymentResult(success: success, error: error)
+                }
+                
+            case .full:
+                paymentManager.processFullPayment(for: booking) { success, error in
+                    handlePaymentResult(success: success, error: error)
+                }
+                
+            case .remainingBalance:
+                paymentManager.processRemainingBalancePayment(for: booking) { success, error in
+                    handlePaymentResult(success: success, error: error)
                 }
             }
-            
-        case .fullPayment(let booking):
-            paymentManager.processFullPayment(for: booking) { success, error in
-                if !success {
-                    handlePaymentError(error)
-                }
-            }
-            
-        case .remainingBalance(let booking):
-            paymentManager.processRemainingBalancePayment(for: booking) { success, error in
-                if !success {
-                    handlePaymentError(error)
-                }
-            }
-            
-        case .productPurchase(let items, let shipping):
-            paymentManager.processProductPayment(for: items, shipping: shipping) { success, error in
-                if !success {
-                    handlePaymentError(error)
-                }
+        } else if let items = cartItems {
+            paymentManager.processProductPayment(for: items, shipping: shippingOption) { success, error in
+                handlePaymentResult(success: success, error: error)
             }
         }
     }
     
-    private func handlePaymentResult(_ result: PaymentSheetResult) {
-        switch result {
-        case .completed:
+    private func handlePaymentResult(success: Bool, error: String?) {
+        if success {
             paymentResultMessage = "Payment completed successfully!"
-            showingPaymentResult = true
-            
-        case .canceled:
-            paymentResultMessage = "Payment was canceled."
-            showingPaymentResult = true
-            
-        case .failed(let error):
-            paymentResultMessage = "Payment failed: \(error.localizedDescription)"
-            showingPaymentResult = true
+        } else {
+            paymentResultMessage = error ?? "An unknown error occurred"
         }
-    }
-    
-    private func handlePaymentError(_ error: String?) {
-        paymentResultMessage = error ?? "An unknown error occurred"
         showingPaymentResult = true
     }
 }
 
-// MARK: - Service Payment Type
-enum ServicePaymentType {
-    case deposit
-    case full
-    case remainingBalance
-}
-
 // MARK: - Summary Views
 
-struct DepositSummaryView: View {
+struct ServiceSummaryView: View {
     let booking: Booking
+    let paymentType: ServUPaymentType
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -246,19 +195,47 @@ struct DepositSummaryView: View {
                     .fontWeight(.medium)
             }
             
-            HStack {
-                Text("Deposit Amount:")
-                Spacer()
-                Text("$\(booking.service.calculatedDepositAmount, specifier: "%.2f")")
-                    .fontWeight(.semibold)
-                    .foregroundColor(.servURed)
-            }
-            
-            HStack {
-                Text("Remaining Balance:")
-                Spacer()
-                Text("$\(booking.service.remainingBalance, specifier: "%.2f")")
-                    .foregroundColor(.secondary)
+            switch paymentType {
+            case .deposit:
+                HStack {
+                    Text("Deposit Amount:")
+                    Spacer()
+                    Text("$\(String(format: "%.2f", booking.service.calculatedDepositAmount))")
+                        .fontWeight(.semibold)
+                        .foregroundColor(.servURed)
+                }
+                
+                HStack {
+                    Text("Remaining Balance:")
+                    Spacer()
+                    Text("$\(String(format: "%.2f", booking.service.remainingBalance))")
+                        .foregroundColor(.secondary)
+                }
+                
+            case .full:
+                HStack {
+                    Text("Full Payment:")
+                    Spacer()
+                    Text("$\(String(format: "%.2f", booking.totalPrice))")
+                        .fontWeight(.semibold)
+                        .foregroundColor(.servURed)
+                }
+                
+            case .remainingBalance:
+                HStack {
+                    Text("Deposit Paid:")
+                    Spacer()
+                    Text("$\(String(format: "%.2f", booking.service.calculatedDepositAmount))")
+                        .foregroundColor(.green)
+                }
+                
+                HStack {
+                    Text("Remaining Balance:")
+                    Spacer()
+                    Text("$\(String(format: "%.2f", booking.service.remainingBalance))")
+                        .fontWeight(.semibold)
+                        .foregroundColor(.servURed)
+                }
             }
             
             Divider()
@@ -266,63 +243,8 @@ struct DepositSummaryView: View {
             HStack {
                 Text("Total Service Cost:")
                 Spacer()
-                Text("$\(booking.service.price, specifier: "%.2f")")
+                Text("$\(String(format: "%.2f", booking.service.price))")
                     .fontWeight(.semibold)
-            }
-        }
-        .font(.subheadline)
-    }
-}
-
-struct FullPaymentSummaryView: View {
-    let booking: Booking
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Service:")
-                Spacer()
-                Text(booking.service.name)
-                    .fontWeight(.medium)
-            }
-            
-            HStack {
-                Text("Full Payment:")
-                Spacer()
-                Text("$\(booking.totalPrice, specifier: "%.2f")")
-                    .fontWeight(.semibold)
-                    .foregroundColor(.servURed)
-            }
-        }
-        .font(.subheadline)
-    }
-}
-
-struct RemainingBalanceSummaryView: View {
-    let booking: Booking
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Service:")
-                Spacer()
-                Text(booking.service.name)
-                    .fontWeight(.medium)
-            }
-            
-            HStack {
-                Text("Deposit Paid:")
-                Spacer()
-                Text("$\(booking.service.calculatedDepositAmount, specifier: "%.2f")")
-                    .foregroundColor(.green)
-            }
-            
-            HStack {
-                Text("Remaining Balance:")
-                Spacer()
-                Text("$\(booking.service.remainingBalance, specifier: "%.2f")")
-                    .fontWeight(.semibold)
-                    .foregroundColor(.servURed)
             }
         }
         .font(.subheadline)
@@ -347,7 +269,7 @@ struct ProductSummaryView: View {
                 HStack {
                     Text("\(item.quantity)x \(item.product.name)")
                     Spacer()
-                    Text("$\(item.totalPrice, specifier: "%.2f")")
+                    Text("$\(String(format: "%.2f", item.totalPrice))")
                         .fontWeight(.medium)
                 }
             }
@@ -356,7 +278,7 @@ struct ProductSummaryView: View {
                 HStack {
                     Text("Shipping (\(shipping.name)):")
                     Spacer()
-                    Text("$\(shipping.price, specifier: "%.2f")")
+                    Text("$\(String(format: "%.2f", shipping.price))")
                         .fontWeight(.medium)
                 }
             }
@@ -366,7 +288,7 @@ struct ProductSummaryView: View {
             HStack {
                 Text("Total:")
                 Spacer()
-                Text("$\(total, specifier: "%.2f")")
+                Text("$\(String(format: "%.2f", total))")
                     .fontWeight(.semibold)
                     .foregroundColor(.servURed)
             }
@@ -393,9 +315,20 @@ struct ErrorMessageView: View {
     }
 }
 
-// MARK: - Color Extension (if not already defined)
-extension Color {
-    static let servURed = Color(red: 0.85, green: 0.17, blue: 0.25)
+struct SuccessMessageView: View {
+    var body: some View {
+        HStack {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundColor(.green)
+            Text("Payment completed successfully!")
+                .font(.subheadline)
+                .foregroundColor(.green)
+            Spacer()
+        }
+        .padding(12)
+        .background(Color.green.opacity(0.1))
+        .cornerRadius(8)
+    }
 }
 
 // MARK: - Preview
@@ -415,20 +348,37 @@ struct PaymentIntegrationView_Previews: PreviewProvider {
 // MARK: - Sample Data Extension
 extension Booking {
     static var sampleBooking: Booking {
-        Booking(
+        let sampleService = Service(
+            name: "Portrait Photography",
+            description: "Professional portrait session",
+            price: 150.0,
+            duration: "2 hours",
+            isAvailable: true,
+            requiresDeposit: true,
+            depositAmount: 50.0,
+            depositType: .fixed,
+            depositPolicy: "50% deposit required"
+        )
+        
+        let sampleBusiness = Business(
             id: UUID(),
-            service: Service(
-                name: "Portrait Photography",
-                description: "Professional portrait session",
-                price: 150.0,
-                duration: "2 hours",
-                isAvailable: true,
-                requiresDeposit: true,
-                depositAmount: 50.0,
-                depositType: .fixed,
-                depositPolicy: "50% deposit required"
-            ),
-            business: Business.sampleBusiness,
+            name: "Sample Photography",
+            category: .photoVideo,
+            description: "Professional photography services",
+            rating: 4.8,
+            priceRange: .moderate,
+            imageURL: "",
+            isActive: true,
+            location: "Campus Area",
+            contactInfo: ContactInfo(email: "info@example.com", phone: "(555) 123-4567"),
+            services: [],
+            availability: BusinessHours.allDay
+        )
+        
+        return Booking(
+            id: UUID(),
+            service: sampleService,
+            business: sampleBusiness,
             customerName: "John Doe",
             customerEmail: "john@example.com",
             customerPhone: "(555) 123-4567",
@@ -440,26 +390,6 @@ extension Booking {
             totalPrice: 150.0,
             paymentStatus: .pending,
             createdAt: Date()
-        )
-    }
-}
-
-extension Business {
-    static var sampleBusiness: Business {
-        Business(
-            id: UUID(),
-            name: "Sample Photography",
-            description: "Professional photography services",
-            category: .photoVideo,
-            priceRange: .moderate,
-            rating: 4.8,
-            reviewCount: 24,
-            profileImageURL: "",
-            isActive: true,
-            location: "Campus Area",
-            contactInfo: ContactInfo(email: "info@example.com", phone: "(555) 123-4567"),
-            services: [],
-            availability: BusinessHours.allDay
         )
     }
 }
