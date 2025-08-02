@@ -798,16 +798,72 @@ class ShoppingCartManager: ObservableObject {
     }
 }
 
-// MARK: - Codable Conformance Extensions
-extension ProductVariant: Codable {}
-extension VariantAttribute: Codable {}
-extension ProductInventory: Codable {}
-extension ProductSpecification: Codable {}
+// MARK: - Codable Extensions (Add to end of ServUService.swift)
+
+extension Product: Codable {
+    enum CodingKeys: String, CodingKey {
+        case id, name, description, category, basePrice, images, variants, inventory, specifications, tags, isActive, createdDate, lastUpdated
+    }
+}
+
+extension ProductVariant: Codable {
+    enum CodingKeys: String, CodingKey {
+        case id, name, price, sku, attributes, inventory, isActive
+    }
+}
+
+extension VariantAttribute: Codable {
+    enum CodingKeys: String, CodingKey {
+        case id, name, value, displayOrder
+    }
+}
+
+extension ProductInventory: Codable {
+    enum CodingKeys: String, CodingKey {
+        case quantity, lowStockThreshold, trackInventory
+    }
+}
+
 extension ProductImage: Codable {
-    private enum CodingKeys: String, CodingKey {
+    enum CodingKeys: String, CodingKey {
         case id, imageURL, isPrimary, altText
     }
 }
-extension Product: Codable {}
-extension ShippingOption: Codable {}
-extension CartItem: Codable {}
+
+extension ProductSpecification: Codable {
+    enum CodingKeys: String, CodingKey {
+        case id, name, value
+    }
+}
+
+extension ShippingOption: Codable {
+    enum CodingKeys: String, CodingKey {
+        case id, name, description, price, estimatedDays, isAvailable
+    }
+}
+
+extension CartItem: Codable {
+    enum CodingKeys: String, CodingKey {
+        case id, product, selectedVariant, quantity, addedDate
+    }
+}
+
+// MARK: - BusinessHours Extension
+extension BusinessHours {
+    static var allDay: BusinessHours {
+        return BusinessHours.defaultHours
+    }
+}
+
+// Codable conformance for BusinessHours
+extension BusinessHours: Codable {
+    enum CodingKeys: String, CodingKey {
+        case monday, tuesday, wednesday, thursday, friday, saturday, sunday
+    }
+}
+
+extension DaySchedule: Codable {
+    enum CodingKeys: String, CodingKey {
+        case isOpen, openTime, closeTime
+    }
+}
