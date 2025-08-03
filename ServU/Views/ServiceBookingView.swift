@@ -2,7 +2,7 @@
 //  ServiceBookingView.swift
 //  ServU
 //
-//  Created by Amber Still on 7/31/25.
+//  Created by Amber Still on 8/3/25.
 //
 
 
@@ -11,8 +11,8 @@
 //  ServU
 //
 //  Created by Quian Bowden on 7/29/25.
-//  Updated by Assistant on 7/31/25.
-//  Fixed imports and removed duplicate ServULoadingView
+//  Updated by Quian Bowden on 8/2/25.
+//  Fixed PaymentManager import and types
 //
 
 import SwiftUI
@@ -20,10 +20,10 @@ import Foundation
 
 struct ServiceBookingView: View {
     let business: Business
-    let service: ServUService // Using ServUService model
+    let service: ServUService
     @ObservedObject var userProfile: UserProfile
     @ObservedObject var bookingManager: BookingManager
-    @StateObject private var paymentManager = PaymentManager()
+    @StateObject private var paymentManager = PaymentManager() // Fixed: Use correct PaymentManager
     
     @State private var selectedDate = Date()
     @State private var selectedTimeSlot: TimeSlot?
@@ -58,7 +58,7 @@ struct ServiceBookingView: View {
                     .padding(.horizontal, 20)
                 }
                 
-                // Loading Overlay - Using ServULoadingView from RoundedCorner.swift
+                // Loading Overlay
                 if isLoading {
                     ServULoadingView(message: "Booking your appointment...")
                 }
@@ -75,6 +75,18 @@ struct ServiceBookingView: View {
         }
     }
     
+    // MARK: - Background Gradient
+    private var backgroundGradient: some View {
+        LinearGradient(
+            gradient: Gradient(colors: [
+                Color(.systemGroupedBackground),
+                Color(.systemBackground)
+            ]),
+            startPoint: .top,
+            endPoint: .bottom
+        )
+    }
+    
     // MARK: - Progress Indicator
     private var progressIndicatorView: some View {
         HStack(spacing: 0) {
@@ -86,76 +98,55 @@ struct ServiceBookingView: View {
                 HStack(spacing: 0) {
                     // Step Circle
                     Circle()
-                        .fill(isActive ? userProfile.college?.primaryColor ?? .blue : Color.gray.opacity(0.3))
-                        .frame(width: isCurrent ? 32 : 24, height: isCurrent ? 32 : 24)
+                        .fill(isActive ? (userProfile.college?.primaryColor ?? .blue) : Color.gray.opacity(0.3))
+                        .frame(width: 24, height: 24)
                         .overlay(
                             Text("\(index + 1)")
                                 .font(.caption)
                                 .fontWeight(.semibold)
                                 .foregroundColor(isActive ? .white : .gray)
                         )
+                        .scaleEffect(isCurrent ? 1.2 : 1.0)
                         .animation(.spring(response: 0.3), value: currentStep)
                     
-                    // Connector Line
+                    // Connecting Line (except for last step)
                     if index < BookingStep.allCases.count - 1 {
                         Rectangle()
-                            .fill(isActive ? userProfile.college?.primaryColor ?? .blue : Color.gray.opacity(0.3))
+                            .fill(isActive ? (userProfile.college?.primaryColor ?? .blue) : Color.gray.opacity(0.3))
                             .frame(height: 2)
                             .frame(maxWidth: .infinity)
                     }
                 }
             }
         }
-        .padding(.top, 20)
+        .padding(.horizontal, 20)
     }
     
     // MARK: - Service Summary
     private var serviceSummaryView: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(business.name)
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                    
-                    Text(service.name)
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(userProfile.college?.primaryColor ?? .blue)
-                    
-                    HStack(spacing: 16) {
-                        Label(service.duration, systemImage: "clock")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        
-                        Text(String(format: "$%.0f", service.price))
-                            .font(.headline)
-                            .fontWeight(.bold)
-                            .foregroundColor(.primary)
-                    }
-                }
-                
-                Spacer()
-                
-                // Service Icon
-                Circle()
-                    .fill(userProfile.college?.primaryColor ?? .blue)
-                    .frame(width: 60, height: 60)
-                    .overlay(
-                        Image(systemName: business.category.icon)
-                            .font(.system(size: 24))
-                            .foregroundColor(.white)
-                    )
-            }
+        VStack(alignment: .leading, spacing: 12) {
+            Text(service.name)
+                .font(.title2)
+                .fontWeight(.bold)
             
             Text(service.description)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
+            
+            HStack {
+                Label("\(service.duration) minutes", systemImage: "clock")
+                Spacer()
+                Text("$\(String(format: "%.2f", service.price))")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.servURed)
+            }
+            .font(.subheadline)
         }
-        .padding(20)
+        .padding(16)
         .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
     }
     
     // MARK: - Step Content
@@ -169,237 +160,161 @@ struct ServiceBookingView: View {
         case .paymentInfo:
             paymentInfoView
         case .addNotes:
-            additionalNotesView
+            notesView
         }
     }
     
-    // MARK: - Date/Time Selection
+    // MARK: - Date & Time Selection
     private var dateTimeSelectionView: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("Select Date & Time")
-                .font(.title2)
-                .fontWeight(.bold)
+                .font(.headline)
+                .fontWeight(.semibold)
             
             // Date Picker
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Choose Date")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                
-                DatePicker("", selection: $selectedDate, in: Date()..., displayedComponents: .date)
-                    .datePickerStyle(GraphicalDatePickerStyle())
-                    .accentColor(userProfile.college?.primaryColor ?? .blue)
-            }
-            .padding(16)
-            .background(Color(.systemBackground))
-            .cornerRadius(12)
-            .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+            DatePicker(
+                "Appointment Date",
+                selection: $selectedDate,
+                in: Date()...,
+                displayedComponents: .date
+            )
+            .datePickerStyle(GraphicalDatePickerStyle())
             
             // Time Slots
-            VStack(alignment: .leading, spacing: 12) {
+            if !availableTimeSlots.isEmpty {
                 Text("Available Times")
-                    .font(.headline)
-                    .fontWeight(.semibold)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .padding(.top)
                 
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 12) {
-                    ForEach(availableTimeSlots, id: \.id) { timeSlot in
+                    ForEach(availableTimeSlots) { slot in
                         TimeSlotButton(
-                            timeSlot: timeSlot,
-                            isSelected: selectedTimeSlot?.id == timeSlot.id,
+                            timeSlot: slot,
+                            isSelected: selectedTimeSlot?.id == slot.id,
                             userProfile: userProfile
                         ) {
-                            selectedTimeSlot = timeSlot
+                            selectedTimeSlot = slot
                         }
                     }
                 }
+            } else {
+                Text("No available time slots for this date")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding()
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(8)
             }
-            .padding(16)
-            .background(Color(.systemBackground))
-            .cornerRadius(12)
-            .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
         }
+        .padding(16)
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
     }
     
     // MARK: - Confirmation Details
     private var confirmationDetailsView: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Confirm Your Booking")
-                .font(.title2)
-                .fontWeight(.bold)
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Confirm Details")
+                .font(.headline)
+                .fontWeight(.semibold)
             
-            VStack(spacing: 16) {
-                // Customer Info
-                BookingConfirmationCard(title: "Customer Information") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        BookingInfoRow(label: "Name", value: userProfile.fullName)
-                        BookingInfoRow(label: "Email", value: userProfile.email)
-                        if !userProfile.phoneNumber.isEmpty {
-                            BookingInfoRow(label: "Phone", value: userProfile.phoneNumber)
-                        }
-                    }
-                }
-                
-                // Appointment Details
-                BookingConfirmationCard(title: "Appointment Details") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        BookingInfoRow(label: "Service", value: service.name)
-                        BookingInfoRow(label: "Business", value: business.name)
-                        BookingInfoRow(label: "Date", value: DateFormatter.bookingDate.string(from: selectedDate))
-                        BookingInfoRow(label: "Time", value: selectedTimeSlot?.displayTime ?? "Not selected")
-                        BookingInfoRow(label: "Duration", value: service.duration)
-                        BookingInfoRow(label: "Price", value: String(format: "$%.0f", service.price))
-                    }
-                }
-                
-                // Location Info
-                BookingConfirmationCard(title: "Location") {
-                    HStack(spacing: 12) {
-                        Image(systemName: "location.fill")
-                            .foregroundColor(userProfile.college?.primaryColor ?? .blue)
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(business.location)
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                            
-                            Text("Exact address will be provided after booking")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        Spacer()
-                    }
+            BookingConfirmationCard(title: "Appointment Details") {
+                VStack(alignment: .leading, spacing: 8) {
+                    BookingInfoRow(label: "Service", value: service.name)
+                    BookingInfoRow(label: "Date", value: DateFormatter.bookingDate.string(from: selectedDate))
+                    BookingInfoRow(label: "Time", value: selectedTimeSlot?.displayTime ?? "Not selected")
+                    BookingInfoRow(label: "Duration", value: "\(service.duration) minutes")
+                    BookingInfoRow(label: "Price", value: "$\(String(format: "%.2f", service.price))")
                 }
             }
         }
     }
     
-    // MARK: - Payment Information
+    // MARK: - Payment Info
     private var paymentInfoView: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("Payment Information")
-                .font(.title2)
-                .fontWeight(.bold)
+                .font(.headline)
+                .fontWeight(.semibold)
             
             if service.requiresDeposit {
-                BookingConfirmationCard(title: "Deposit Required") {
+                BookingConfirmationCard(title: "Payment Options") {
                     VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Deposit Amount")
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                
-                                Text(service.displayDepositAmount)
-                                    .font(.title3)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(userProfile.college?.primaryColor ?? .blue)
-                            }
-                            
-                            Spacer()
-                            
-                            VStack(alignment: .trailing, spacing: 4) {
-                                Text("Remaining Balance")
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                
-                                Text(String(format: "$%.2f", service.remainingBalance))
-                                    .font(.title3)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.green)
-                            }
-                        }
-                        
-                        Divider()
+                        Text("This service requires a deposit")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                         
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Deposit Policy")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
+                            HStack {
+                                Text("Deposit Amount:")
+                                Spacer()
+                                Text("$\(String(format: "%.2f", service.calculatedDepositAmount))")
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.servURed)
+                            }
                             
-                            Text(service.depositPolicy)
+                            HStack {
+                                Text("Remaining Balance:")
+                                Spacer()
+                                Text("$\(String(format: "%.2f", service.remainingBalance))")
+                                    .foregroundColor(.secondary)
+                            }
+                            
+                            Text("The remaining balance will be due at your appointment")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                                .lineSpacing(2)
+                                .padding(.top, 4)
                         }
-                        
-                        HStack {
-                            Image(systemName: "info.circle")
-                                .foregroundColor(.blue)
-                            
-                            Text("The remaining balance will be charged after service completion")
-                                .font(.caption)
-                                .foregroundColor(.blue)
-                        }
-                        .padding()
-                        .background(Color.blue.opacity(0.1))
-                        .cornerRadius(8)
                     }
                 }
             } else {
                 BookingConfirmationCard(title: "Payment") {
-                    VStack(alignment: .leading, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Text("Total Amount")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                            
+                            Text("Total Amount:")
                             Spacer()
-                            
-                            Text(String(format: "$%.2f", service.price))
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(.green)
+                            Text("$\(String(format: "%.2f", service.price))")
+                                .fontWeight(.semibold)
+                                .foregroundColor(.servURed)
                         }
                         
-                        HStack {
-                            Image(systemName: "info.circle")
-                                .foregroundColor(.green)
-                            
-                            Text("Full payment will be processed after service completion")
-                                .font(.caption)
-                                .foregroundColor(.green)
-                        }
-                        .padding()
-                        .background(Color.green.opacity(0.1))
-                        .cornerRadius(8)
+                        Text("Payment will be processed upon booking confirmation")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
                 }
             }
         }
     }
     
-    // MARK: - Additional Notes
-    private var additionalNotesView: some View {
-        VStack(alignment: .leading, spacing: 20) {
+    // MARK: - Notes
+    private var notesView: some View {
+        VStack(alignment: .leading, spacing: 16) {
             Text("Additional Notes")
-                .font(.title2)
-                .fontWeight(.bold)
+                .font(.headline)
+                .fontWeight(.semibold)
             
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Special Requests or Notes (Optional)")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                
-                TextEditor(text: $additionalNotes)
-                    .frame(minHeight: 120)
-                    .padding(12)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color(.systemGray4), lineWidth: 1)
-                    )
-                
-                Text("Let \(business.name) know about any special requirements or preferences.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            .padding(16)
-            .background(Color(.systemBackground))
-            .cornerRadius(12)
-            .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+            TextEditor(text: $additionalNotes)
+                .frame(minHeight: 100)
+                .padding(8)
+                .background(Color(.systemGray6))
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                )
+            
+            Text("Optional: Add any special requests or information")
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
+        .padding(16)
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
     }
     
     // MARK: - Action Buttons
@@ -413,63 +328,51 @@ struct ServiceBookingView: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(userProfile.college?.primaryColor ?? .blue)
+                    .background(canProceed ? (userProfile.college?.primaryColor ?? .blue) : Color.gray)
                     .cornerRadius(12)
             }
-            .disabled(!canProceed)
-            .opacity(canProceed ? 1.0 : 0.6)
+            .disabled(!canProceed || isLoading)
             
-            // Secondary Action Button
+            // Back Button (except on first step)
             if currentStep != .selectDateTime {
                 Button(action: previousStep) {
                     Text("Back")
-                        .font(.headline)
-                        .fontWeight(.semibold)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
                         .foregroundColor(userProfile.college?.primaryColor ?? .blue)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
+                        .padding(.vertical, 12)
                         .background(Color.clear)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(userProfile.college?.primaryColor ?? .blue, lineWidth: 2)
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(userProfile.college?.primaryColor ?? .blue, lineWidth: 1)
                         )
+                        .cornerRadius(8)
                 }
+                .disabled(isLoading)
             }
         }
     }
     
     // MARK: - Computed Properties
-    private var backgroundGradient: some View {
-        LinearGradient(
-            gradient: Gradient(colors: [
-                userProfile.college?.colorScheme.background ?? Color(.systemGray6),
-                Color(.systemBackground)
-            ]),
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    }
     
     private var availableTimeSlots: [TimeSlot] {
+        // Generate sample time slots for demo
         let calendar = Calendar.current
-        let hour = calendar.component(.hour, from: Date())
-        let isToday = calendar.isDate(selectedDate, inSameDayAs: Date())
-        
+        let startHour = 9
+        let endHour = 17
         var slots: [TimeSlot] = []
         
-        for h in 9...17 {
-            if isToday && h <= hour + 1 { continue }
+        for hour in startHour..<endHour {
+            let startTime = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: selectedDate) ?? selectedDate
+            let endTime = calendar.date(bySettingHour: hour + 1, minute: 0, second: 0, of: selectedDate) ?? selectedDate
             
-            let slot = TimeSlot(
+            slots.append(TimeSlot(
                 id: UUID(),
-                startTime: calendar.date(bySettingHour: h, minute: 0, second: 0, of: selectedDate) ?? Date(),
-                endTime: calendar.date(bySettingHour: h + 1, minute: 0, second: 0, of: selectedDate) ?? Date(),
-                isAvailable: Bool.random()
-            )
-            
-            if slot.isAvailable {
-                slots.append(slot)
-            }
+                startTime: startTime,
+                endTime: endTime,
+                isAvailable: true
+            ))
         }
         
         return slots
@@ -479,11 +382,7 @@ struct ServiceBookingView: View {
         switch currentStep {
         case .selectDateTime:
             return selectedTimeSlot != nil
-        case .confirmDetails:
-            return true
-        case .paymentInfo:
-            return true
-        case .addNotes:
+        case .confirmDetails, .paymentInfo, .addNotes:
             return true
         }
     }
@@ -493,9 +392,9 @@ struct ServiceBookingView: View {
         case .selectDateTime:
             return "Continue"
         case .confirmDetails:
-            return "Review Payment"
+            return "Continue"
         case .paymentInfo:
-            return "Add Notes"
+            return "Continue"
         case .addNotes:
             return service.requiresDeposit ? "Pay Deposit & Book" : "Book Appointment"
         }
@@ -533,7 +432,7 @@ struct ServiceBookingView: View {
         
         isLoading = true
         
-        // Convert ServUService to Booking-compatible format
+        // Create booking
         let booking = Booking(
             id: UUID(),
             service: service,
@@ -550,27 +449,40 @@ struct ServiceBookingView: View {
         )
         
         if service.requiresDeposit {
-            paymentManager.processDepositPayment(for: booking) { success, transactionId in
-                if success {
-                    var updatedBooking = booking
-                    updatedBooking.paymentStatus = .depositPaid
-                    updatedBooking.depositTransactionId = transactionId
-                    
-                    bookingManager.addBooking(updatedBooking)
-                    isLoading = false
-                    presentationMode.wrappedValue.dismiss()
-                } else {
-                    isLoading = false
+            // Process deposit payment
+            paymentManager.processDepositPayment(for: booking) { success, error in
+                DispatchQueue.main.async {
+                    if success {
+                        var updatedBooking = booking
+                        updatedBooking.paymentStatus = .depositPaid
+                        
+                        bookingManager.addBooking(updatedBooking)
+                        isLoading = false
+                        presentationMode.wrappedValue.dismiss()
+                    } else {
+                        isLoading = false
+                        // Show error - could add alert here
+                        print("Payment failed: \(error ?? "Unknown error")")
+                    }
                 }
             }
         } else {
-            var updatedBooking = booking
-            updatedBooking.paymentStatus = .pending
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                bookingManager.addBooking(updatedBooking)
-                isLoading = false
-                presentationMode.wrappedValue.dismiss()
+            // Process full payment
+            paymentManager.processFullPayment(for: booking) { success, error in
+                DispatchQueue.main.async {
+                    if success {
+                        var updatedBooking = booking
+                        updatedBooking.paymentStatus = .fullyPaid
+                        
+                        bookingManager.addBooking(updatedBooking)
+                        isLoading = false
+                        presentationMode.wrappedValue.dismiss()
+                    } else {
+                        isLoading = false
+                        // Show error - could add alert here
+                        print("Payment failed: \(error ?? "Unknown error")")
+                    }
+                }
             }
         }
     }

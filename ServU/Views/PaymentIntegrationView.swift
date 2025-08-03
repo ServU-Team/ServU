@@ -2,7 +2,7 @@
 //  PaymentIntegrationView.swift
 //  ServU
 //
-//  Created by Amber Still on 8/2/25.
+//  Created by Amber Still on 8/3/25.
 //
 
 
@@ -11,7 +11,7 @@
 //  ServU
 //
 //  Created by Quian Bowden on 8/2/25.
-//  Simple payment integration view for ServU
+//  Payment integration view for ServU services and products
 //
 
 import SwiftUI
@@ -267,16 +267,26 @@ struct ProductSummaryView: View {
         VStack(alignment: .leading, spacing: 8) {
             ForEach(items) { item in
                 HStack {
-                    Text("\(item.quantity)x \(item.product.name)")
+                    Text("\(item.quantity)x \(item.displayName)")
                     Spacer()
                     Text("$\(String(format: "%.2f", item.totalPrice))")
                         .fontWeight(.medium)
                 }
+                .font(.subheadline)
+            }
+            
+            Divider()
+            
+            HStack {
+                Text("Subtotal:")
+                Spacer()
+                Text("$\(String(format: "%.2f", subtotal))")
+                    .fontWeight(.medium)
             }
             
             if let shipping = shipping {
                 HStack {
-                    Text("Shipping (\(shipping.name)):")
+                    Text("Shipping:")
                     Spacer()
                     Text("$\(String(format: "%.2f", shipping.price))")
                         .fontWeight(.medium)
@@ -297,6 +307,8 @@ struct ProductSummaryView: View {
     }
 }
 
+// MARK: - Message Views
+
 struct ErrorMessageView: View {
     let message: String
     
@@ -307,9 +319,8 @@ struct ErrorMessageView: View {
             Text(message)
                 .font(.subheadline)
                 .foregroundColor(.red)
-            Spacer()
         }
-        .padding(12)
+        .padding()
         .background(Color.red.opacity(0.1))
         .cornerRadius(8)
     }
@@ -323,9 +334,8 @@ struct SuccessMessageView: View {
             Text("Payment completed successfully!")
                 .font(.subheadline)
                 .foregroundColor(.green)
-            Spacer()
         }
-        .padding(12)
+        .padding()
         .background(Color.green.opacity(0.1))
         .cornerRadius(8)
     }
@@ -334,19 +344,20 @@ struct SuccessMessageView: View {
 // MARK: - Preview
 struct PaymentIntegrationView_Previews: PreviewProvider {
     static var previews: some View {
-        VStack {
-            PaymentIntegrationView(
-                for: Booking.sampleBooking,
-                type: .deposit
-            )
-            .padding()
+        Group {
+            // Service Payment Preview
+            PaymentIntegrationView(for: sampleBooking, type: .deposit)
+                .padding()
+                .previewDisplayName("Service Deposit")
+            
+            // Product Payment Preview
+            PaymentIntegrationView(for: sampleCartItems, shipping: sampleShippingOption)
+                .padding()
+                .previewDisplayName("Product Purchase")
         }
-        .background(Color(.systemGroupedBackground))
     }
-}
-
-// MARK: - Sample Data Extension
-extension Booking {
+    
+    // Sample booking for preview
     static var sampleBooking: Booking {
         let sampleService = Service(
             name: "Portrait Photography",
@@ -361,18 +372,17 @@ extension Booking {
         )
         
         let sampleBusiness = Business(
-            id: UUID(),
-            name: "Sample Photography",
+            name: "Campus Photography",
             category: .photoVideo,
             description: "Professional photography services",
             rating: 4.8,
             priceRange: .moderate,
-            imageURL: "",
+            imageURL: nil,
             isActive: true,
             location: "Campus Area",
             contactInfo: ContactInfo(email: "info@example.com", phone: "(555) 123-4567"),
-            services: [],
-            availability: BusinessHours.allDay
+            services: [sampleService],
+            availability: BusinessHours.defaultHours
         )
         
         return Booking(
@@ -388,8 +398,46 @@ extension Booking {
             status: .confirmed,
             notes: "",
             totalPrice: 150.0,
-            paymentStatus: .pending,
-            createdAt: Date()
+            paymentStatus: .pending
         )
+    }
+    
+    // Sample cart items for preview
+    static var sampleCartItems: [CartItem] {
+        let product1 = Product(
+            name: "Campus T-Shirt",
+            description: "Official university merchandise",
+            category: .clothing,
+            basePrice: 25.0,
+            images: [],
+            variants: [],
+            inventory: ProductInventory(quantity: 50),
+            specifications: [],
+            tags: ["clothing", "university", "apparel"],
+            isActive: true
+        )
+        
+        let product2 = Product(
+            name: "Campus Hoodie",
+            description: "Comfortable university hoodie",
+            category: .clothing,
+            basePrice: 45.0,
+            images: [],
+            variants: [],
+            inventory: ProductInventory(quantity: 25),
+            specifications: [],
+            tags: ["clothing", "university", "hoodie"],
+            isActive: true
+        )
+        
+        return [
+            CartItem(product: product1, quantity: 2),
+            CartItem(product: product2, quantity: 1)
+        ]
+    }
+    
+    // Sample shipping option for preview
+    static var sampleShippingOption: ShippingOption {
+        return ShippingOption.standardShipping
     }
 }
