@@ -11,10 +11,11 @@
 //  ServU
 //
 //  Created by Quian Bowden on 8/3/25.
-//  Complete payment integration view for ServU services and products
+//  Enhanced payment integration view with real Stripe support
 //
 
 import SwiftUI
+import UIKit
 import Foundation
 
 // MARK: - Payment Integration View
@@ -22,6 +23,7 @@ struct PaymentIntegrationView: View {
     @StateObject private var paymentManager = PaymentManager()
     @State private var showingPaymentResult = false
     @State private var paymentResultMessage = ""
+    @State private var showingStripeInfo = false
     
     let booking: Booking?
     let cartItems: [CartItem]?
@@ -49,45 +51,15 @@ struct PaymentIntegrationView: View {
             // Payment Summary
             PaymentSummaryCard()
             
-            // Payment Button
-            PaymentButton()
-            
-            // Payment Status
-            PaymentStatusView()
-        }
-        .padding(.horizontal, 20)
-        .alert("Payment Result", isPresented: $showingPaymentResult) {
-            Button("OK") { 
-                paymentManager.resetPaymentState()
+            // Stripe Configuration Info (Debug Mode Only)
+            #if DEBUG
+            if showingStripeInfo {
+                StripeInfoCard()
             }
-        } message: {
-            Text(paymentResultMessage)
-        }
-    }
-    
-    // MARK: - Subviews
+            #endif
     
     @ViewBuilder
-    private func PaymentSummaryCard() -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Payment Summary")
-                .font(.headline)
-                .fontWeight(.semibold)
-            
-            if let booking = booking {
-                ServiceSummaryView(booking: booking, paymentType: paymentType)
-            } else if let items = cartItems {
-                ProductSummaryView(items: items, shipping: shippingOption)
-            }
-        }
-        .padding(16)
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
-    }
-    
-    @ViewBuilder
-    private func PaymentButton() -> some View {
+    func PaymentButton() -> some View {
         Button(action: initiatePayment) {
             HStack {
                 if paymentManager.isProcessingPayment {
@@ -114,9 +86,61 @@ struct PaymentIntegrationView: View {
         .scaleEffect(paymentManager.isProcessingPayment ? 0.95 : 1.0)
         .animation(.easeInOut(duration: 0.1), value: paymentManager.isProcessingPayment)
     }
+            
+            // Payment Button
+            PaymentButton()
+            
+            // Payment Status
+            PaymentStatusView()
+            
+            Spacer()
+        }
+        .alert("Payment Result", isPresented: $showingPaymentResult) {
+            Button("OK") { 
+                paymentManager.resetPaymentState()
+            }
+        } message: {
+            Text(paymentResultMessage)
+        }
+        .onAppear {
+            // Configure Stripe when view appears
+            StripeConfig.configure()
+        }
+        .toolbar {
+            #if DEBUG
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Debug") {
+                    showingStripeInfo.toggle()
+                }
+                .foregroundColor(.blue)
+            }
+            #endif
+        }
+    }
+    
+    // MARK: - Subviews
     
     @ViewBuilder
-    private func PaymentStatusView() -> some View {
+    func PaymentSummaryCard() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Payment Summary")
+                .font(.headline)
+                .fontWeight(.semibold)
+            
+            if let booking = booking {
+                ServiceSummaryView(booking: booking, paymentType: paymentType)
+            } else if let items = cartItems {
+                ProductSummaryView(items: items, shipping: shippingOption)
+            }
+        }
+        .padding(16)
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+    }
+    
+    @ViewBuilder
+    func PaymentStatusView() -> some View {
         VStack(spacing: 12) {
             if paymentManager.isProcessingPayment {
                 HStack {
@@ -147,9 +171,71 @@ struct PaymentIntegrationView: View {
         }
     }
     
-    // MARK: - Computed Properties
+    #if DEBUG
+    @ViewBuilder
+    func StripeInfoCard() -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "creditcard.fill")
+                    .foregroundColor(.blue)
+                Text("Stripe Configuration")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                Spacer()
+                Button("Hide") {
+                    showingStripeInfo = false
+                }
+                .font(.caption)
+                .foregroundColor(.blue)
+            }
+            
+            Text(StripeConfig.getEnvironmentInfo())
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.vertical, 4)
+            
+            HStack {
+                Image(systemName: StripeConfig.validateConfiguration() ? "checkmark.circle.fill" : "xmark.circle.fill")
+                    .foregroundColor(StripeConfig.validateConfiguration() ? .green : .red)
+                Text(StripeConfig.validateConfiguration() ? "Configuration Valid" : "Configuration Invalid")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                Spacer()
+            }
+        }
+        .padding(12)
+        .background(Color(.systemGray6))
+        .cornerRadius(8)
+    }
+    #endif
+        Button(action: initiatePayment) {
+            HStack {
+                if paymentManager.isProcessingPayment {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                        .foregroundColor(.white)
+                } else {
+                    Image(systemName: "creditcard.fill")
+                        .font(.system(size: 16, weight: .medium))
+                }
+                
+                Text(paymentButtonTitle)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(Color.servURed)
+            .cornerRadius(12)
+            .disabled(paymentManager.isProcessingPayment)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .scaleEffect(paymentManager.isProcessingPayment ? 0.95 : 1.0)
+        .animation(.easeInOut(duration: 0.1), value: paymentManager.isProcessingPayment)
+    }
     
-    private var paymentButtonTitle: String {
+    var paymentButtonTitle: String {
         if let booking = booking {
             switch paymentType {
             case .deposit:
@@ -169,7 +255,7 @@ struct PaymentIntegrationView: View {
     
     // MARK: - Payment Actions
     
-    private func initiatePayment() {
+    func initiatePayment() {
         // Reset previous state
         paymentManager.resetPaymentState()
         
@@ -197,12 +283,21 @@ struct PaymentIntegrationView: View {
         }
     }
     
-    private func handlePaymentResult(success: Bool, error: String?) {
+    func handlePaymentResult(success: Bool, error: String?) {
         DispatchQueue.main.async {
             if success {
                 paymentResultMessage = "🎉 Payment completed successfully!\n\nYou will receive a confirmation email shortly."
+                
+                // Add haptic feedback for success
+                let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                impactFeedback.impactOccurred()
+                
             } else {
                 paymentResultMessage = "❌ Payment failed\n\n\(error ?? "An unknown error occurred. Please try again.")"
+                
+                // Add haptic feedback for failure
+                let notificationFeedback = UINotificationFeedbackGenerator()
+                notificationFeedback.notificationOccurred(.error)
             }
             showingPaymentResult = true
         }
@@ -284,11 +379,11 @@ struct ProductSummaryView: View {
     let items: [CartItem]
     let shipping: ShippingOption?
     
-    private var subtotal: Double {
+    var subtotal: Double {
         items.reduce(0) { $0 + $1.totalPrice }
     }
     
-    private var total: Double {
+    var total: Double {
         subtotal + (shipping?.price ?? 0.0)
     }
     
