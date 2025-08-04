@@ -10,18 +10,18 @@
 //  PaymentIntegrationView.swift
 //  ServU
 //
-//  Created by Quian Bowden on 8/3/25.
-//  Complete payment integration view for ServU services and products
+//  Created by Quian Bowden on 8/4/25.
+//  Payment integration view for ServU services and products with proper type handling
 //
 
 import SwiftUI
-import Foundation
 
 // MARK: - Payment Integration View
 struct PaymentIntegrationView: View {
     @StateObject private var paymentManager = PaymentManager()
     @State private var showingPaymentResult = false
     @State private var paymentResultMessage = ""
+    @State private var isPaymentSuccessful = false
     
     let booking: Booking?
     let cartItems: [CartItem]?
@@ -37,436 +37,229 @@ struct PaymentIntegrationView: View {
         self.paymentType = type
     }
     
-    init(for cartItems: [CartItem], shipping: ShippingOption? = nil) {
+    init(for cartItems: [CartItem], shipping: ShippingOption?) {
         self.booking = nil
         self.cartItems = cartItems
         self.shippingOption = shipping
-        self.paymentType = .full // Product purchases are always full payments
+        self.paymentType = .full // Products always use full payment
     }
     
+    // MARK: - Body
     var body: some View {
         VStack(spacing: 20) {
-            // Payment Summary
-            PaymentSummaryCard()
+            paymentHeaderView
+            paymentAmountView
+            paymentMethodSection
             
-            // Payment Button
-            PaymentButton()
+            if paymentManager.isProcessingPayment {
+                processingView
+            } else {
+                paymentButton
+            }
             
-            // Payment Status
-            PaymentStatusView()
+            if let error = paymentManager.paymentError {
+                errorView(error)
+            }
         }
-        .padding(.horizontal, 20)
+        .padding()
+        .navigationTitle("Payment")
+        .navigationBarTitleDisplayMode(.inline)
         .alert("Payment Result", isPresented: $showingPaymentResult) {
-            Button("OK") { 
-                paymentManager.resetPaymentState()
+            Button("OK") {
+                if isPaymentSuccessful {
+                    // Handle successful payment navigation
+                }
             }
         } message: {
             Text(paymentResultMessage)
         }
     }
     
-    // MARK: - Subviews
+    // MARK: - View Components
     
-    @ViewBuilder
-    private func PaymentSummaryCard() -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Payment Summary")
-                .font(.headline)
+    private var paymentHeaderView: some View {
+        VStack(spacing: 8) {
+            Image(systemName: paymentType.icon)
+                .font(.system(size: 40))
+                .foregroundColor(.blue)
+            
+            Text(paymentType.displayName)
+                .font(.title2)
                 .fontWeight(.semibold)
             
-            if let booking = booking {
-                ServiceSummaryView(booking: booking, paymentType: paymentType)
-            } else if let items = cartItems {
-                ProductSummaryView(items: items, shipping: shippingOption)
-            }
+            Text(paymentType.description)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
         }
-        .padding(16)
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
     }
     
-    @ViewBuilder
-    private func PaymentButton() -> some View {
-        Button(action: initiatePayment) {
+    private var paymentAmountView: some View {
+        VStack(spacing: 12) {
+            Text("Amount Due")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            
+            Text(formattedAmount)
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .foregroundColor(.primary)
+        }
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
+    
+    private var paymentMethodSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Payment Method")
+                .font(.headline)
+            
             HStack {
-                if paymentManager.isProcessingPayment {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                        .foregroundColor(.white)
-                } else {
-                    Image(systemName: "creditcard.fill")
-                        .font(.system(size: 16, weight: .medium))
+                Image(systemName: "creditcard.fill")
+                    .foregroundColor(.blue)
+                
+                VStack(alignment: .leading) {
+                    Text("Credit/Debit Card")
+                        .fontWeight(.medium)
+                    Text("Secure payment via Stripe")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
                 
-                Text(paymentButtonTitle)
-                    .font(.headline)
-                    .fontWeight(.semibold)
+                Spacer()
+                
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
             }
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(paymentManager.isProcessingPayment ? Color.gray : Color.servURed)
-            .cornerRadius(12)
-            .disabled(paymentManager.isProcessingPayment)
+            .padding()
+            .background(Color(.systemBackground))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.blue, lineWidth: 1)
+            )
         }
-        .buttonStyle(PlainButtonStyle())
-        .scaleEffect(paymentManager.isProcessingPayment ? 0.95 : 1.0)
-        .animation(.easeInOut(duration: 0.1), value: paymentManager.isProcessingPayment)
     }
     
-    @ViewBuilder
-    private func PaymentStatusView() -> some View {
-        VStack(spacing: 12) {
-            if paymentManager.isProcessingPayment {
-                HStack {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Processing payment...")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                        Text("This may take a few seconds")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    Spacer()
-                }
-                .padding()
-                .background(Color.blue.opacity(0.1))
-                .cornerRadius(8)
+    private var paymentButton: some View {
+        Button(action: processPayment) {
+            HStack {
+                Image(systemName: "creditcard")
+                Text("Pay \(formattedAmount)")
             }
-            
-            if let error = paymentManager.paymentError {
-                ErrorMessageView(message: error)
-            }
-            
-            if paymentManager.paymentSuccess {
-                SuccessMessageView()
-            }
+            .foregroundColor(.white)
+            .font(.headline)
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color.blue)
+            .cornerRadius(12)
         }
+        .disabled(paymentManager.isProcessingPayment)
+    }
+    
+    private var processingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .scaleEffect(1.2)
+            
+            Text("Processing Payment...")
+                .font(.headline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
+    }
+    
+    private func errorView(_ error: String) -> some View {
+        VStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.red)
+                .font(.title2)
+            
+            Text("Payment Error")
+                .font(.headline)
+                .foregroundColor(.red)
+            
+            Text(error)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding()
+        .background(Color.red.opacity(0.1))
+        .cornerRadius(12)
     }
     
     // MARK: - Computed Properties
     
-    private var paymentButtonTitle: String {
+    private var formattedAmount: String {
+        let amount = calculatePaymentAmount()
+        return String(format: "$%.2f", amount)
+    }
+    
+    // MARK: - Helper Methods
+    
+    private func calculatePaymentAmount() -> Double {
         if let booking = booking {
             switch paymentType {
             case .deposit:
-                return "Pay Deposit ($\(String(format: "%.2f", booking.service.calculatedDepositAmount)))"
+                return booking.service.calculatedDepositAmount
             case .full:
-                return "Pay Full Amount ($\(String(format: "%.2f", booking.totalPrice)))"
+                return booking.totalPrice
             case .remainingBalance:
-                return "Pay Remaining Balance ($\(String(format: "%.2f", booking.service.remainingBalance)))"
+                return booking.service.remainingBalance
             }
         } else if let items = cartItems {
-            let total = items.reduce(0) { $0 + $1.totalPrice } + (shippingOption?.price ?? 0.0)
-            return "Complete Purchase ($\(String(format: "%.2f", total)))"
-        } else {
-            return "Pay Now"
+            let subtotal = items.reduce(0) { $0 + $1.totalPrice }
+            return subtotal + (shippingOption?.price ?? 0.0)
+        }
+        return 0.0
+    }
+    
+    private func processPayment() {
+        if let booking = booking {
+            processBookingPayment(booking)
+        } else if let items = cartItems {
+            processProductPayment(items)
         }
     }
     
-    // MARK: - Payment Actions
+    private func processBookingPayment(_ booking: Booking) {
+        switch paymentType {
+        case .deposit:
+            paymentManager.processDepositPayment(for: booking) { [weak self] (success: Bool, error: String?) in
+                self?.handlePaymentResult(success: success, error: error)
+            }
+        case .full:
+            paymentManager.processFullPayment(for: booking) { [weak self] (success: Bool, error: String?) in
+                self?.handlePaymentResult(success: success, error: error)
+            }
+        case .remainingBalance:
+            paymentManager.processRemainingBalancePayment(for: booking) { [weak self] (success: Bool, error: String?) in
+                self?.handlePaymentResult(success: success, error: error)
+            }
+        }
+    }
     
-    private func initiatePayment() {
-        // Reset previous state
-        paymentManager.resetPaymentState()
-        
-        if let booking = booking {
-            switch paymentType {
-            case .deposit:
-                paymentManager.processDepositPayment(for: booking) { success, error in
-                    handlePaymentResult(success: success, error: error)
-                }
-                
-            case .full:
-                paymentManager.processFullPayment(for: booking) { success, error in
-                    handlePaymentResult(success: success, error: error)
-                }
-                
-            case .remainingBalance:
-                paymentManager.processRemainingBalancePayment(for: booking) { success, error in
-                    handlePaymentResult(success: success, error: error)
-                }
-            }
-        } else if let items = cartItems {
-            paymentManager.processProductPayment(for: items, shipping: shippingOption) { success, error in
-                handlePaymentResult(success: success, error: error)
-            }
+    private func processProductPayment(_ items: [CartItem]) {
+        paymentManager.processProductPayment(for: items, shipping: shippingOption) { [weak self] (success: Bool, error: String?) in
+            self?.handlePaymentResult(success: success, error: error)
         }
     }
     
     private func handlePaymentResult(success: Bool, error: String?) {
         DispatchQueue.main.async {
+            self.isPaymentSuccessful = success
+            
             if success {
-                paymentResultMessage = "🎉 Payment completed successfully!\n\nYou will receive a confirmation email shortly."
+                self.paymentResultMessage = "Payment processed successfully!"
             } else {
-                paymentResultMessage = "❌ Payment failed\n\n\(error ?? "An unknown error occurred. Please try again.")"
+                self.paymentResultMessage = error ?? "An unexpected error occurred."
             }
-            showingPaymentResult = true
+            
+            self.showingPaymentResult = true
         }
-    }
-}
-
-// MARK: - Summary Views
-
-struct ServiceSummaryView: View {
-    let booking: Booking
-    let paymentType: ServUPaymentType
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Service:")
-                Spacer()
-                Text(booking.service.name)
-                    .fontWeight(.medium)
-            }
-            
-            switch paymentType {
-            case .deposit:
-                HStack {
-                    Text("Deposit Amount:")
-                    Spacer()
-                    Text("$\(String(format: "%.2f", booking.service.calculatedDepositAmount))")
-                        .fontWeight(.semibold)
-                        .foregroundColor(.servURed)
-                }
-                
-                HStack {
-                    Text("Remaining Balance:")
-                    Spacer()
-                    Text("$\(String(format: "%.2f", booking.service.remainingBalance))")
-                        .foregroundColor(.secondary)
-                }
-                
-            case .full:
-                HStack {
-                    Text("Full Payment:")
-                    Spacer()
-                    Text("$\(String(format: "%.2f", booking.totalPrice))")
-                        .fontWeight(.semibold)
-                        .foregroundColor(.servURed)
-                }
-                
-            case .remainingBalance:
-                HStack {
-                    Text("Deposit Paid:")
-                    Spacer()
-                    Text("$\(String(format: "%.2f", booking.service.calculatedDepositAmount))")
-                        .foregroundColor(.green)
-                }
-                
-                HStack {
-                    Text("Remaining Balance:")
-                    Spacer()
-                    Text("$\(String(format: "%.2f", booking.service.remainingBalance))")
-                        .fontWeight(.semibold)
-                        .foregroundColor(.servURed)
-                }
-            }
-            
-            Divider()
-            
-            HStack {
-                Text("Total Service Cost:")
-                Spacer()
-                Text("$\(String(format: "%.2f", booking.service.price))")
-                    .fontWeight(.semibold)
-            }
-        }
-        .font(.subheadline)
-    }
-}
-
-struct ProductSummaryView: View {
-    let items: [CartItem]
-    let shipping: ShippingOption?
-    
-    private var subtotal: Double {
-        items.reduce(0) { $0 + $1.totalPrice }
-    }
-    
-    private var total: Double {
-        subtotal + (shipping?.price ?? 0.0)
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ForEach(items) { item in
-                HStack {
-                    Text("\(item.quantity)x \(item.displayName)")
-                    Spacer()
-                    Text("$\(String(format: "%.2f", item.totalPrice))")
-                        .fontWeight(.medium)
-                }
-                .font(.subheadline)
-            }
-            
-            Divider()
-            
-            HStack {
-                Text("Subtotal:")
-                Spacer()
-                Text("$\(String(format: "%.2f", subtotal))")
-                    .fontWeight(.medium)
-            }
-            
-            if let shipping = shipping {
-                HStack {
-                    Text("Shipping:")
-                    Spacer()
-                    Text("$\(String(format: "%.2f", shipping.price))")
-                        .fontWeight(.medium)
-                }
-            }
-            
-            Divider()
-            
-            HStack {
-                Text("Total:")
-                Spacer()
-                Text("$\(String(format: "%.2f", total))")
-                    .fontWeight(.semibold)
-                    .foregroundColor(.servURed)
-            }
-        }
-        .font(.subheadline)
-    }
-}
-
-// MARK: - Message Views
-
-struct ErrorMessageView: View {
-    let message: String
-    
-    var body: some View {
-        HStack {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(.red)
-            Text(message)
-                .font(.subheadline)
-                .foregroundColor(.red)
-        }
-        .padding()
-        .background(Color.red.opacity(0.1))
-        .cornerRadius(8)
-    }
-}
-
-struct SuccessMessageView: View {
-    var body: some View {
-        HStack {
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(.green)
-            Text("Payment completed successfully!")
-                .font(.subheadline)
-                .foregroundColor(.green)
-        }
-        .padding()
-        .background(Color.green.opacity(0.1))
-        .cornerRadius(8)
-    }
-}
-
-// MARK: - Preview
-struct PaymentIntegrationView_Previews: PreviewProvider {
-    static var previews: some View {
-        Group {
-            // Service Payment Preview
-            PaymentIntegrationView(for: sampleBooking, type: .deposit)
-                .padding()
-                .previewDisplayName("Service Deposit")
-            
-            // Product Payment Preview
-            PaymentIntegrationView(for: sampleCartItems, shipping: sampleShippingOption)
-                .padding()
-                .previewDisplayName("Product Purchase")
-        }
-    }
-    
-    // Sample booking for preview
-    static var sampleBooking: Booking {
-        let sampleService = Service(
-            name: "Portrait Photography",
-            description: "Professional portrait session",
-            price: 150.0,
-            duration: "2 hours",
-            isAvailable: true,
-            requiresDeposit: true,
-            depositAmount: 50.0,
-            depositType: .fixed,
-            depositPolicy: "50% deposit required"
-        )
-        
-        let sampleBusiness = Business(
-            name: "Campus Photography",
-            category: .photoVideo,
-            description: "Professional photography services",
-            rating: 4.8,
-            priceRange: .moderate,
-            imageURL: nil,
-            isActive: true,
-            location: "Campus Area",
-            contactInfo: ContactInfo(email: "info@example.com", phone: "(555) 123-4567"),
-            services: [sampleService],
-            availability: BusinessHours.defaultHours
-        )
-        
-        return Booking(
-            id: UUID(),
-            service: sampleService,
-            business: sampleBusiness,
-            customerName: "John Doe",
-            customerEmail: "john@example.com",
-            customerPhone: "(555) 123-4567",
-            appointmentDate: Date(),
-            startTime: Date(),
-            endTime: Date().addingTimeInterval(7200),
-            status: .confirmed,
-            notes: "",
-            totalPrice: 150.0,
-            paymentStatus: .pending
-        )
-    }
-    
-    // Sample cart items for preview
-    static var sampleCartItems: [CartItem] {
-        let product1 = Product(
-            name: "Campus T-Shirt",
-            description: "Official university merchandise",
-            category: .clothing,
-            basePrice: 25.0,
-            images: [],
-            variants: [],
-            inventory: ProductInventory(quantity: 50),
-            specifications: [],
-            tags: ["clothing", "university", "apparel"],
-            isActive: true
-        )
-        
-        let product2 = Product(
-            name: "Campus Hoodie",
-            description: "Comfortable university hoodie",
-            category: .clothing,
-            basePrice: 45.0,
-            images: [],
-            variants: [],
-            inventory: ProductInventory(quantity: 25),
-            specifications: [],
-            tags: ["clothing", "university", "hoodie"],
-            isActive: true
-        )
-        
-        return [
-            CartItem(product: product1, quantity: 2),
-            CartItem(product: product2, quantity: 1)
-        ]
-    }
-    
-    // Sample shipping option for preview
-    static var sampleShippingOption: ShippingOption {
-        return ShippingOption.standardShipping
     }
 }
