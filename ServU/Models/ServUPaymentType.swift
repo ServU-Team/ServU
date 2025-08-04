@@ -11,14 +11,14 @@
 //  ServU
 //
 //  Created by Quian Bowden on 8/4/25.
-//  Consolidated payment types for ServU platform
+//  Single source of truth for all payment-related types
 //
 
 import Foundation
 import SwiftUI
 
 // MARK: - ServU Payment Type (Primary)
-enum ServUPaymentType: String, CaseIterable, Codable {
+enum ServUPaymentType: String, CaseIterable, Codable, Hashable {
     case deposit = "deposit"
     case full = "full"
     case remainingBalance = "remaining_balance"
@@ -55,54 +55,16 @@ enum ServUPaymentType: String, CaseIterable, Codable {
             return "creditcard.circle"
         }
     }
-}
-
-// MARK: - Payment Option (Legacy Support)
-enum PaymentOption: String, CaseIterable, Codable {
-    case deposit = "deposit"
-    case full = "full" 
-    case remaining = "remaining"
     
-    var displayName: String {
+    var color: Color {
         switch self {
         case .deposit:
-            return "Deposit"
+            return .orange
         case .full:
-            return "Full Payment"
-        case .remaining:
-            return "Remaining Balance"
+            return .green
+        case .remainingBalance:
+            return .blue
         }
-    }
-    
-    var description: String {
-        switch self {
-        case .deposit:
-            return "Pay a deposit to secure your booking"
-        case .full:
-            return "Pay the full amount upfront"
-        case .remaining:
-            return "Pay the remaining balance due"
-        }
-    }
-    
-    // Convert to ServUPaymentType for compatibility
-    var toServUPaymentType: ServUPaymentType {
-        switch self {
-        case .deposit:
-            return .deposit
-        case .full:
-            return .full
-        case .remaining:
-            return .remainingBalance
-        }
-    }
-}
-
-// MARK: - ServUPaymentType Extension
-extension ServUPaymentType {
-    // Convert from PaymentOption for legacy compatibility
-    init(from paymentOption: PaymentOption) {
-        self = paymentOption.toServUPaymentType
     }
 }
 
@@ -134,6 +96,63 @@ enum PaymentStatus: String, CaseIterable, Codable {
         case .refunded: return "arrow.counterclockwise"
         case .failed: return "xmark.circle"
         case .notRequired: return "checkmark.circle"
+        }
+    }
+}
+
+// MARK: - Payment Error Types
+enum PaymentError: Error, LocalizedError {
+    case invalidAmount
+    case paymentFailed(String)
+    case networkError
+    case invalidConfiguration
+    case userCancelled
+    
+    var errorDescription: String? {
+        switch self {
+        case .invalidAmount:
+            return "Invalid payment amount"
+        case .paymentFailed(let message):
+            return message
+        case .networkError:
+            return "Network connection error"
+        case .invalidConfiguration:
+            return "Payment configuration error"
+        case .userCancelled:
+            return "Payment cancelled by user"
+        }
+    }
+}
+
+// MARK: - Legacy Support (If needed)
+typealias PaymentOption = ServUPaymentType
+
+// MARK: - Extensions for Convenience
+extension ServUPaymentType {
+    
+    /// Determine payment type based on booking and payment status
+    static func determinePaymentType(for booking: Booking) -> ServUPaymentType {
+        switch booking.paymentStatus {
+        case .pending:
+            return booking.service.requiresDeposit ? .deposit : .full
+        case .depositPaid:
+            return .remainingBalance
+        case .fullyPaid, .notRequired:
+            return .full
+        case .failed, .refunded:
+            return .full
+        }
+    }
+    
+    /// Calculate amount for this payment type
+    func calculateAmount(for service: Service) -> Double {
+        switch self {
+        case .deposit:
+            return service.calculatedDepositAmount
+        case .full:
+            return service.price
+        case .remainingBalance:
+            return service.remainingBalance
         }
     }
 }

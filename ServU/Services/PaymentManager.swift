@@ -1,5 +1,5 @@
 //
-//  PaymentManagerProtocol.swift
+//  definition.swift
 //  ServU
 //
 //  Created by Amber Still on 8/4/25.
@@ -7,11 +7,11 @@
 
 
 //
-//  PaymentManager.swift
+//  PaymentManagerProtocol.swift
 //  ServU
 //
-//  Created by Quian Bowden on 8/3/25.
-//  Complete payment management system for ServU
+//  Created by Quian Bowden on 8/4/25.
+//  Clean protocol definition without duplicates
 //
 
 import Foundation
@@ -31,7 +31,8 @@ protocol PaymentManagerProtocol: ObservableObject {
 }
 
 // MARK: - Payment Manager Implementation
-class PaymentManager: PaymentManagerProtocol, ObservableObject {
+@MainActor
+class PaymentManager: PaymentManagerProtocol {
     @Published var isProcessingPayment = false
     @Published var paymentError: String?
     @Published var paymentSuccess = false
@@ -41,7 +42,9 @@ class PaymentManager: PaymentManagerProtocol, ObservableObject {
     // MARK: - Service Payment Methods
     
     func processDepositPayment(for booking: Booking, completion: @escaping (Bool, String?) -> Void) {
-        updatePaymentState(processing: true, error: nil, success: false)
+        isProcessingPayment = true
+        paymentError = nil
+        paymentSuccess = false
         
         let amount = booking.service.calculatedDepositAmount
         
@@ -49,14 +52,15 @@ class PaymentManager: PaymentManagerProtocol, ObservableObject {
             amount: amount,
             currency: "usd",
             description: "Deposit for \(booking.service.name)"
-        ) { [weak self] result in
+        ) { result in
             DispatchQueue.main.async {
+                self.isProcessingPayment = false
                 switch result {
                 case .success(_):
-                    self?.updatePaymentState(processing: false, error: nil, success: true)
+                    self.paymentSuccess = true
                     completion(true, nil)
                 case .failure(let error):
-                    self?.updatePaymentState(processing: false, error: error.localizedDescription, success: false)
+                    self.paymentError = error.localizedDescription
                     completion(false, error.localizedDescription)
                 }
             }
@@ -64,7 +68,9 @@ class PaymentManager: PaymentManagerProtocol, ObservableObject {
     }
     
     func processFullPayment(for booking: Booking, completion: @escaping (Bool, String?) -> Void) {
-        updatePaymentState(processing: true, error: nil, success: false)
+        isProcessingPayment = true
+        paymentError = nil
+        paymentSuccess = false
         
         let amount = booking.totalPrice
         
@@ -72,14 +78,15 @@ class PaymentManager: PaymentManagerProtocol, ObservableObject {
             amount: amount,
             currency: "usd",
             description: "Full payment for \(booking.service.name)"
-        ) { [weak self] result in
+        ) { result in
             DispatchQueue.main.async {
+                self.isProcessingPayment = false
                 switch result {
                 case .success(_):
-                    self?.updatePaymentState(processing: false, error: nil, success: true)
+                    self.paymentSuccess = true
                     completion(true, nil)
                 case .failure(let error):
-                    self?.updatePaymentState(processing: false, error: error.localizedDescription, success: false)
+                    self.paymentError = error.localizedDescription
                     completion(false, error.localizedDescription)
                 }
             }
@@ -87,7 +94,9 @@ class PaymentManager: PaymentManagerProtocol, ObservableObject {
     }
     
     func processRemainingBalancePayment(for booking: Booking, completion: @escaping (Bool, String?) -> Void) {
-        updatePaymentState(processing: true, error: nil, success: false)
+        isProcessingPayment = true
+        paymentError = nil
+        paymentSuccess = false
         
         let amount = booking.service.remainingBalance
         
@@ -95,43 +104,44 @@ class PaymentManager: PaymentManagerProtocol, ObservableObject {
             amount: amount,
             currency: "usd",
             description: "Remaining balance for \(booking.service.name)"
-        ) { [weak self] result in
+        ) { result in
             DispatchQueue.main.async {
+                self.isProcessingPayment = false
                 switch result {
                 case .success(_):
-                    self?.updatePaymentState(processing: false, error: nil, success: true)
+                    self.paymentSuccess = true
                     completion(true, nil)
                 case .failure(let error):
-                    self?.updatePaymentState(processing: false, error: error.localizedDescription, success: false)
+                    self.paymentError = error.localizedDescription
                     completion(false, error.localizedDescription)
                 }
             }
         }
     }
     
-    // MARK: - Product Payment Methods
-    
     func processProductPayment(for items: [CartItem], shipping: ShippingOption?, completion: @escaping (Bool, String?) -> Void) {
-        updatePaymentState(processing: true, error: nil, success: false)
+        isProcessingPayment = true
+        paymentError = nil
+        paymentSuccess = false
         
         let subtotal = items.reduce(0) { $0 + $1.totalPrice }
         let totalAmount = subtotal + (shipping?.price ?? 0.0)
         
-        let productNames = items.map { "\($0.quantity)x \($0.displayName)" }.joined(separator: ", ")
-        let description = "Purchase: \(productNames)"
+        let description = "Purchase of \(items.count) item(s)"
         
         stripeService.createPaymentIntent(
             amount: totalAmount,
             currency: "usd",
             description: description
-        ) { [weak self] result in
+        ) { result in
             DispatchQueue.main.async {
+                self.isProcessingPayment = false
                 switch result {
                 case .success(_):
-                    self?.updatePaymentState(processing: false, error: nil, success: true)
+                    self.paymentSuccess = true
                     completion(true, nil)
                 case .failure(let error):
-                    self?.updatePaymentState(processing: false, error: error.localizedDescription, success: false)
+                    self.paymentError = error.localizedDescription
                     completion(false, error.localizedDescription)
                 }
             }
@@ -139,15 +149,53 @@ class PaymentManager: PaymentManagerProtocol, ObservableObject {
     }
     
     // MARK: - State Management
-    
     func resetPaymentState() {
-        updatePaymentState(processing: false, error: nil, success: false)
-    }
-    
-    private func updatePaymentState(processing: Bool, error: String?, success: Bool) {
-        isProcessingPayment = processing
-        paymentError = error
-        paymentSuccess = success
+        isProcessingPayment = false
+        paymentError = nil
+        paymentSuccess = false
     }
 }
 
+// MARK: - Stripe Payment Service
+class StripePaymentService: ObservableObject {
+    
+    @Published var isProcessingPayment = false
+    @Published var paymentError: String?
+    
+    func createPaymentIntent(
+        amount: Double,
+        currency: String,
+        description: String,
+        completion: @escaping (Result<String, PaymentError>) -> Void
+    ) {
+        guard amount > 0 else {
+            completion(.failure(.invalidAmount))
+            return
+        }
+        
+        isProcessingPayment = true
+        paymentError = nil
+        
+        print("✅ DEBUG: Creating payment intent for amount: $\(amount)")
+        
+        // Simulate payment processing
+        DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) {
+            let success = Double.random(in: 0...1) > 0.1 // 90% success rate
+            
+            DispatchQueue.main.async {
+                self.isProcessingPayment = false
+                
+                if success {
+                    let paymentIntentId = "pi_\(UUID().uuidString.prefix(24))"
+                    print("✅ DEBUG: Payment intent created successfully: \(paymentIntentId)")
+                    completion(.success(paymentIntentId))
+                } else {
+                    let error = PaymentError.paymentFailed("Payment was declined")
+                    self.paymentError = error.localizedDescription
+                    print("❌ DEBUG: Payment intent creation failed")
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+}
