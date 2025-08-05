@@ -11,13 +11,13 @@
 //  ServU
 //
 //  Created by Quian Bowden on 8/5/25.
-//  Fixed compilation errors and Codable conformance
+//  Cleaned up duplicate definitions and improved structure
 //
 
 import Foundation
 import SwiftUI
 
-// MARK: - Cart Item
+// MARK: - Cart Item (SINGLE DEFINITION)
 struct CartItem: Identifiable, Codable {
     let id = UUID()
     var product: Product
@@ -74,9 +74,17 @@ struct CartItem: Identifiable, Codable {
             return product.inventory.stockStatus
         }
     }
+    
+    var formattedTotalPrice: String {
+        return String(format: "$%.2f", totalPrice)
+    }
+    
+    var canIncreaseQuantity: Bool {
+        return quantity < availableQuantity
+    }
 }
 
-// MARK: - Shopping Cart Manager
+// MARK: - Shopping Cart Manager (SINGLE SOURCE OF TRUTH)
 class ShoppingCartManager: ObservableObject {
     @Published var items: [CartItem] = []
     @Published var selectedShippingOption: ShippingOption = .campusPickup
@@ -162,7 +170,6 @@ class ShoppingCartManager: ObservableObject {
             items.append(newItem)
         }
         
-        // Trigger UI update
         objectWillChange.send()
     }
     
@@ -203,7 +210,7 @@ class ShoppingCartManager: ObservableObject {
         return getItem(for: product, variant: variant)?.quantity ?? 0
     }
     
-    // MARK: - Business Grouping - Fixed method signature
+    // MARK: - Business Grouping
     func getItemsForBusiness(businessId: String) -> [CartItem] {
         return items.filter { item in
             item.businessId == businessId
@@ -219,51 +226,6 @@ class ShoppingCartManager: ObservableObject {
     var hasMultipleBusinesses: Bool {
         let businessIds = Set(items.compactMap { $0.businessId })
         return businessIds.count > 1
-    }
-    
-    // MARK: - Category Filtering
-    func getItemsForCategory(_ category: ProductCategory) -> [CartItem] {
-        return items.filter { $0.product.category == category }
-    }
-    
-    // MARK: - Shipping Methods
-    func updateShipping(_ option: ShippingOption) {
-        selectedShippingOption = option
-        objectWillChange.send()
-    }
-    
-    func getAvailableShippingOptions() -> [ShippingOption] {
-        return ShippingOption.allCases
-    }
-    
-    // MARK: - Promo Codes
-    func applyPromoCode(_ code: String) -> Bool {
-        // Simple promo code validation
-        switch code.uppercased() {
-        case "STUDENT10":
-            appliedPromoCode = code
-            promoDiscount = subtotal * 0.10
-            objectWillChange.send()
-            return true
-        case "FIRSTORDER":
-            appliedPromoCode = code
-            promoDiscount = min(subtotal * 0.15, 20.0) // 15% off up to $20
-            objectWillChange.send()
-            return true
-        case "FREESHIP":
-            appliedPromoCode = code
-            promoDiscount = selectedShippingOption.cost
-            objectWillChange.send()
-            return true
-        default:
-            return false
-        }
-    }
-    
-    func removePromoCode() {
-        appliedPromoCode = nil
-        promoDiscount = 0.0
-        objectWillChange.send()
     }
     
     // MARK: - Validation

@@ -11,7 +11,7 @@
 //  ServU
 //
 //  Created by Quian Bowden on 8/5/25.
-//  Single source of truth for all payment-related types
+//  Single source of truth for payment types
 //
 
 import Foundation
@@ -68,57 +68,6 @@ enum ServUPaymentType: String, CaseIterable, Codable, Hashable {
     }
 }
 
-// MARK: - Payment Status (SINGLE SOURCE OF TRUTH)
-enum PaymentStatus: String, CaseIterable, Codable {
-    case pending = "Pending"
-    case depositPaid = "Deposit Paid"
-    case fullyPaid = "Fully Paid"
-    case refunded = "Refunded"
-    case failed = "Failed"
-    case notRequired = "No Payment Required"
-    
-    var color: Color {
-        switch self {
-        case .pending: return .orange
-        case .depositPaid: return .blue
-        case .fullyPaid: return .green
-        case .refunded: return .gray
-        case .failed: return .red
-        case .notRequired: return .green
-        }
-    }
-    
-    var icon: String {
-        switch self {
-        case .pending: return "clock"
-        case .depositPaid: return "creditcard"
-        case .fullyPaid: return "checkmark.circle.fill"
-        case .refunded: return "arrow.counterclockwise"
-        case .failed: return "xmark.circle"
-        case .notRequired: return "checkmark.circle"
-        }
-    }
-}
-
-// MARK: - Deposit Type
-enum DepositType: String, CaseIterable, Codable {
-    case fixed = "Fixed Amount"
-    case percentage = "Percentage"
-    
-    var displayName: String {
-        return self.rawValue
-    }
-    
-    var description: String {
-        switch self {
-        case .fixed:
-            return "Fixed dollar amount"
-        case .percentage:
-            return "Percentage of service price"
-        }
-    }
-}
-
 // MARK: - Payment Error Types
 enum PaymentError: Error, LocalizedError {
     case invalidAmount
@@ -142,9 +91,6 @@ enum PaymentError: Error, LocalizedError {
         }
     }
 }
-
-// MARK: - Legacy Support
-typealias PaymentOption = ServUPaymentType
 
 // MARK: - Extensions for Convenience
 extension ServUPaymentType {
