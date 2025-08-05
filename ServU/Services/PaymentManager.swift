@@ -1,201 +1,190 @@
 //
-//  definition.swift
+//  PaymentManager.swift
 //  ServU
 //
-//  Created by Amber Still on 8/4/25.
+//  Created by Amber Still on 8/5/25.
 //
 
 
 //
-//  PaymentManagerProtocol.swift
+//  PaymentManager.swift
 //  ServU
 //
 //  Created by Quian Bowden on 8/4/25.
-//  Clean protocol definition without duplicates
+//  Handles all payment processing for services and products
 //
 
 import Foundation
 import SwiftUI
 
-// MARK: - Payment Manager Protocol
-protocol PaymentManagerProtocol: ObservableObject {
-    var isProcessingPayment: Bool { get }
-    var paymentError: String? { get }
-    var paymentSuccess: Bool { get }
-    
-    func processDepositPayment(for booking: Booking, completion: @escaping (Bool, String?) -> Void)
-    func processFullPayment(for booking: Booking, completion: @escaping (Bool, String?) -> Void)
-    func processRemainingBalancePayment(for booking: Booking, completion: @escaping (Bool, String?) -> Void)
-    func processProductPayment(for items: [CartItem], shipping: ShippingOption?, completion: @escaping (Bool, String?) -> Void)
-    func resetPaymentState()
-}
-
-// MARK: - Payment Manager Implementation
-@MainActor
-class PaymentManager: PaymentManagerProtocol {
-    @Published var isProcessingPayment = false
-    @Published var paymentError: String?
-    @Published var paymentSuccess = false
-    
-    private let stripeService = StripePaymentService()
+// MARK: - Payment Manager
+class PaymentManager: ObservableObject {
+    @Published var isProcessing = false
+    @Published var lastPaymentStatus: PaymentStatus = .pending
     
     // MARK: - Service Payment Methods
-    
     func processDepositPayment(for booking: Booking, completion: @escaping (Bool, String?) -> Void) {
-        isProcessingPayment = true
-        paymentError = nil
-        paymentSuccess = false
+        isProcessing = true
         
-        let amount = booking.service.calculatedDepositAmount
-        
-        stripeService.createPaymentIntent(
-            amount: amount,
-            currency: "usd",
-            description: "Deposit for \(booking.service.name)"
-        ) { result in
-            DispatchQueue.main.async {
-                self.isProcessingPayment = false
-                switch result {
-                case .success(_):
-                    self.paymentSuccess = true
-                    completion(true, nil)
-                case .failure(let error):
-                    self.paymentError = error.localizedDescription
-                    completion(false, error.localizedDescription)
-                }
-            }
+        // Simulate payment processing
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            // Simulate successful payment (90% success rate)
+            let success = Double.random(in: 0...1) > 0.1
+            
+            self.isProcessing = false
+            self.lastPaymentStatus = success ? .depositPaid : .failed
+            
+            completion(success, success ? nil : "Payment failed. Please try again.")
         }
     }
     
     func processFullPayment(for booking: Booking, completion: @escaping (Bool, String?) -> Void) {
-        isProcessingPayment = true
-        paymentError = nil
-        paymentSuccess = false
+        isProcessing = true
         
-        let amount = booking.totalPrice
-        
-        stripeService.createPaymentIntent(
-            amount: amount,
-            currency: "usd",
-            description: "Full payment for \(booking.service.name)"
-        ) { result in
-            DispatchQueue.main.async {
-                self.isProcessingPayment = false
-                switch result {
-                case .success(_):
-                    self.paymentSuccess = true
-                    completion(true, nil)
-                case .failure(let error):
-                    self.paymentError = error.localizedDescription
-                    completion(false, error.localizedDescription)
-                }
-            }
+        // Simulate payment processing
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            // Simulate successful payment (90% success rate)
+            let success = Double.random(in: 0...1) > 0.1
+            
+            self.isProcessing = false
+            self.lastPaymentStatus = success ? .fullyPaid : .failed
+            
+            completion(success, success ? nil : "Payment failed. Please try again.")
         }
     }
     
-    func processRemainingBalancePayment(for booking: Booking, completion: @escaping (Bool, String?) -> Void) {
-        isProcessingPayment = true
-        paymentError = nil
-        paymentSuccess = false
+    func processRemainingBalance(for booking: Booking, completion: @escaping (Bool, String?) -> Void) {
+        isProcessing = true
         
-        let amount = booking.service.remainingBalance
-        
-        stripeService.createPaymentIntent(
-            amount: amount,
-            currency: "usd",
-            description: "Remaining balance for \(booking.service.name)"
-        ) { result in
-            DispatchQueue.main.async {
-                self.isProcessingPayment = false
-                switch result {
-                case .success(_):
-                    self.paymentSuccess = true
-                    completion(true, nil)
-                case .failure(let error):
-                    self.paymentError = error.localizedDescription
-                    completion(false, error.localizedDescription)
-                }
-            }
+        // Simulate payment processing
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            // Simulate successful payment (95% success rate for remaining balance)
+            let success = Double.random(in: 0...1) > 0.05
+            
+            self.isProcessing = false
+            self.lastPaymentStatus = success ? .fullyPaid : .failed
+            
+            completion(success, success ? nil : "Payment failed. Please try again.")
         }
     }
     
-    func processProductPayment(for items: [CartItem], shipping: ShippingOption?, completion: @escaping (Bool, String?) -> Void) {
-        isProcessingPayment = true
-        paymentError = nil
-        paymentSuccess = false
+    // MARK: - Product Payment Methods
+    func processCartPayment(for cart: ShoppingCartManager, completion: @escaping (Bool, String?) -> Void) {
+        isProcessing = true
         
-        let subtotal = items.reduce(0) { $0 + $1.totalPrice }
-        let totalAmount = subtotal + (shipping?.price ?? 0.0)
-        
-        let description = "Purchase of \(items.count) item(s)"
-        
-        stripeService.createPaymentIntent(
-            amount: totalAmount,
-            currency: "usd",
-            description: description
-        ) { result in
-            DispatchQueue.main.async {
-                self.isProcessingPayment = false
-                switch result {
-                case .success(_):
-                    self.paymentSuccess = true
-                    completion(true, nil)
-                case .failure(let error):
-                    self.paymentError = error.localizedDescription
-                    completion(false, error.localizedDescription)
-                }
+        // Simulate payment processing
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            // Simulate successful payment (92% success rate)
+            let success = Double.random(in: 0...1) > 0.08
+            
+            self.isProcessing = false
+            self.lastPaymentStatus = success ? .fullyPaid : .failed
+            
+            if success {
+                // Clear cart on successful payment
+                cart.clearCart()
             }
+            
+            completion(success, success ? nil : "Payment failed. Please check your payment information and try again.")
         }
     }
     
-    // MARK: - State Management
-    func resetPaymentState() {
-        isProcessingPayment = false
-        paymentError = nil
-        paymentSuccess = false
+    // MARK: - Payment Validation
+    func validatePaymentAmount(_ amount: Double) -> Bool {
+        return amount > 0 && amount <= 10000 // Max $10,000 per transaction
+    }
+    
+    func formatPaymentAmount(_ amount: Double) -> String {
+        return String(format: "$%.2f", amount)
+    }
+    
+    // MARK: - Payment Status Updates
+    func updatePaymentStatus(for bookingId: UUID, status: PaymentStatus) {
+        // This would update the payment status in a real backend
+        lastPaymentStatus = status
+        objectWillChange.send()
     }
 }
 
-// MARK: - Stripe Payment Service
-class StripePaymentService: ObservableObject {
+// MARK: - Booking Manager
+class BookingManager: ObservableObject {
+    @Published var userBookings: [Booking] = []
+    @Published var businessBookings: [Booking] = []
     
-    @Published var isProcessingPayment = false
-    @Published var paymentError: String?
+    init() {
+        loadSampleData()
+    }
     
-    func createPaymentIntent(
-        amount: Double,
-        currency: String,
-        description: String,
-        completion: @escaping (Result<String, PaymentError>) -> Void
-    ) {
-        guard amount > 0 else {
-            completion(.failure(.invalidAmount))
-            return
+    // MARK: - Booking Operations
+    func addBooking(_ booking: Booking) {
+        userBookings.append(booking)
+        objectWillChange.send()
+    }
+    
+    func updateBooking(_ booking: Booking) {
+        if let index = userBookings.firstIndex(where: { $0.id == booking.id }) {
+            userBookings[index] = booking
+            objectWillChange.send()
         }
-        
-        isProcessingPayment = true
-        paymentError = nil
-        
-        print("✅ DEBUG: Creating payment intent for amount: $\(amount)")
-        
-        // Simulate payment processing
-        DispatchQueue.global().asyncAfter(deadline: .now() + 2.0) {
-            let success = Double.random(in: 0...1) > 0.1 // 90% success rate
-            
-            DispatchQueue.main.async {
-                self.isProcessingPayment = false
-                
-                if success {
-                    let paymentIntentId = "pi_\(UUID().uuidString.prefix(24))"
-                    print("✅ DEBUG: Payment intent created successfully: \(paymentIntentId)")
-                    completion(.success(paymentIntentId))
-                } else {
-                    let error = PaymentError.paymentFailed("Payment was declined")
-                    self.paymentError = error.localizedDescription
-                    print("❌ DEBUG: Payment intent creation failed")
-                    completion(.failure(error))
-                }
-            }
+    }
+    
+    func cancelBooking(_ booking: Booking, reason: String = "") {
+        if let index = userBookings.firstIndex(where: { $0.id == booking.id }) {
+            userBookings[index].status = .cancelled
+            objectWillChange.send()
         }
+    }
+    
+    func getUpcomingBookings() -> [Booking] {
+        return userBookings.filter { $0.isUpcoming }
+    }
+    
+    func getPastBookings() -> [Booking] {
+        return userBookings.filter { !$0.isUpcoming }
+    }
+    
+    // MARK: - Sample Data
+    private func loadSampleData() {
+        let sampleService = Service(
+            name: "Hair Cut & Style",
+            description: "Professional hair cutting and styling service",
+            price: 45.00,
+            duration: "1 hour",
+            isAvailable: true,
+            requiresDeposit: true,
+            depositAmount: 15.00,
+            depositType: .fixed
+        )
+        
+        let sampleBusiness = Business(
+            name: "Campus Cuts",
+            category: .hairStylist,
+            description: "Your campus hair salon",
+            rating: 4.8,
+            priceRange: .moderate,
+            imageURL: nil,
+            isActive: true,
+            location: "Student Union Building",
+            contactInfo: ContactInfo(email: "cuts@campus.edu", phone: "(555) 123-4567"),
+            services: [sampleService],
+            availability: BusinessHours.defaultHours
+        )
+        
+        let sampleBooking = Booking(
+            service: sampleService,
+            business: sampleBusiness,
+            customerName: "John Doe",
+            customerEmail: "john@university.edu",
+            customerPhone: "(555) 987-6543",
+            appointmentDate: Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date(),
+            startTime: Calendar.current.date(byAdding: .hour, value: 2, to: Date()) ?? Date(),
+            endTime: Calendar.current.date(byAdding: .hour, value: 3, to: Date()) ?? Date(),
+            status: .confirmed,
+            notes: "Please bring ID",
+            totalPrice: sampleService.price,
+            paymentStatus: .pending
+        )
+        
+        userBookings = [sampleBooking]
     }
 }

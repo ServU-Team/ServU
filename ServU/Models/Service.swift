@@ -2,7 +2,7 @@
 //  Service.swift
 //  ServU
 //
-//  Created by Amber Still on 8/4/25.
+//  Created by Amber Still on 8/5/25.
 //
 
 
@@ -12,6 +12,7 @@
 //
 //  Created by Quian Bowden on 6/27/25.
 //  Updated by Quian Bowden on 8/4/25.
+//  Legacy service model with backward compatibility
 //
 
 import Foundation
@@ -74,7 +75,7 @@ struct Business: Codable, Identifiable {
 }
 
 // MARK: - Service Category
-enum ServiceCategory: String, CaseIterable, Identifiable {
+enum ServiceCategory: String, CaseIterable, Identifiable, Codable {
     case photoVideo = "PHOTO/VIDEO"
     case hairStylist = "HAIR STYLIST"
     case barber = "BARBER"
@@ -135,7 +136,7 @@ enum ServiceCategory: String, CaseIterable, Identifiable {
 }
 
 // MARK: - Supporting Models
-enum PriceRange: String, CaseIterable, Identifiable {
+enum PriceRange: String, CaseIterable, Identifiable, Codable {
     case budget = "$"
     case moderate = "$$"
     case premium = "$$$"
@@ -223,7 +224,7 @@ class UserProfile: ObservableObject {
 }
 
 // MARK: - User Supporting Models
-enum ClassificationLevel: String, CaseIterable, Identifiable {
+enum ClassificationLevel: String, CaseIterable, Identifiable, Codable {
     case freshman = "FRESHMAN"
     case sophomore = "SOPHOMORE"
     case junior = "JUNIOR"
@@ -277,7 +278,7 @@ struct UserPreferences: Codable {
     init() {}
 }
 
-enum AppTheme: String, CaseIterable, Identifiable {
+enum AppTheme: String, CaseIterable, Identifiable, Codable {
     case light = "LIGHT"
     case dark = "DARK"
     case system = "SYSTEM"

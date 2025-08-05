@@ -1,18 +1,24 @@
+//
+//  PlatformFeeConfig.swift
+//  ServU
+//
+//  Created by Amber Still on 8/5/25.
+//
+
 
 //
 //  BusinessConversionUtilities.swift
 //  ServU
 //
 //  Created by Quian Bowden on 6/27/25.
-//  Updated by Assistant on 7/31/25.
-//  Fixed Service to ServUService conversion to preserve deposit properties
+//  Updated by Quian Bowden on 8/4/25.
+//  Fixed all scope and conversion issues
 //
 
 import Foundation
+import SwiftUI
 
 // MARK: - Business Model Conversion Utilities
-// These help bridge between old Business model and new EnhancedBusiness model
-
 extension Business {
     /// Converts old Business model to new EnhancedBusiness model
     func toEnhancedBusiness() -> EnhancedBusiness {
@@ -29,9 +35,9 @@ extension Business {
             ownerId: "legacy_\(UUID().uuidString.prefix(8))",
             ownerName: "Business Owner",
             serviceCategories: [self.category],
-            services: self.services.map { $0.toServUService() }, // Convert all services
+            services: self.services.map { $0.toServUService() },
             availability: self.availability,
-            products: [], // No products for legacy businesses
+            products: [],
             productCategories: [],
             shippingOptions: [],
             returnPolicy: "",
@@ -56,48 +62,9 @@ extension EnhancedBusiness {
             isActive: self.isActive,
             location: self.location,
             contactInfo: self.contactInfo,
-            services: self.services.map { $0.toLegacyService() }, // Convert all services
+            services: self.services.map { $0.toLegacyService() },
             availability: self.availability
         )
-    }
-    
-    /// Checks if business has products
-    var hasProducts: Bool {
-        return businessType == .products || businessType == .both
-    }
-    
-    /// Checks if business has services
-    var hasServices: Bool {
-        return businessType == .services || businessType == .both
-    }
-    
-    /// Gets the primary business category for display
-    var primaryCategory: String {
-        if !serviceCategories.isEmpty {
-            return serviceCategories.first?.displayName ?? "Service"
-        } else if !productCategories.isEmpty {
-            return productCategories.first?.displayName ?? "Products"
-        } else {
-            return "Business"
-        }
-    }
-    
-    /// Gets total inventory count across all products
-    var totalProductInventory: Int {
-        return products.reduce(0) { $0 + $1.totalInventory }
-    }
-    
-    /// Gets products that are currently in stock
-    var inStockProducts: [Product] {
-        return products.filter { $0.isInStock }
-    }
-    
-    /// Gets the price range for products
-    var productPriceRange: (min: Double, max: Double)? {
-        guard !products.isEmpty else { return nil }
-        
-        let prices = products.map { $0.basePrice }
-        return (min: prices.min() ?? 0, max: prices.max() ?? 0)
     }
 }
 
@@ -121,7 +88,6 @@ extension ServUService {
 
 extension Service {
     /// Converts legacy Service to ServUService model
-    /// ✅ FIXED: Now preserves all deposit-related properties
     func toServUService() -> ServUService {
         return ServUService(
             name: self.name,
@@ -139,22 +105,6 @@ extension Service {
 
 // MARK: - Product Utilities
 extension Product {
-    /// Gets the cheapest variant price, or base price if no variants
-    var minPrice: Double {
-        if variants.isEmpty {
-            return basePrice
-        }
-        return variants.map { $0.price }.min() ?? basePrice
-    }
-    
-    /// Gets the most expensive variant price, or base price if no variants
-    var maxPrice: Double {
-        if variants.isEmpty {
-            return basePrice
-        }
-        return variants.map { $0.price }.max() ?? basePrice
-    }
-    
     /// Gets available variants (in stock)
     var availableVariants: [ProductVariant] {
         return variants.filter { $0.inventory.quantity > 0 }
@@ -196,9 +146,7 @@ extension ShoppingCartManager {
     /// Gets cart items for a specific business
     func getItems(for business: EnhancedBusiness) -> [CartItem] {
         return items.filter { item in
-            // This would need to be enhanced with business tracking
-            // For now, return all items
-            return true
+            item.businessId == business.id.uuidString
         }
     }
     
@@ -207,44 +155,9 @@ extension ShoppingCartManager {
         return items.count
     }
     
-    /// Checks if cart has items from multiple businesses
-    var hasMultipleBusinesses: Bool {
-        // This would need business tracking on cart items
-        // For now, return false
-        return false
-    }
-    
-    /// Gets cart items by category
-    func getItems(for category: ProductCategory) -> [CartItem] {
-        return items.filter { $0.product.category == category }
-    }
-    
     /// Removes all items of a specific product
     func removeAllItems(for product: Product) {
         items.removeAll { $0.product.id == product.id }
-    }
-    
-    /// Updates shipping option and recalculates totals
-    func updateShipping(_ option: ShippingOption) {
-        selectedShippingOption = option
-    }
-    
-    /// Gets formatted total with currency
-    var formattedTotal: String {
-        return String(format: "$%.2f", total)
-    }
-    
-    /// Gets formatted subtotal with currency
-    var formattedSubtotal: String {
-        return String(format: "$%.2f", subtotal)
-    }
-    
-    /// Gets formatted shipping cost with currency
-    var formattedShippingCost: String {
-        if shippingCost == 0 {
-            return "FREE"
-        }
-        return String(format: "$%.2f", shippingCost)
     }
 }
 
@@ -273,7 +186,7 @@ extension ServiceCategory {
     }
 }
 
-// MARK: - Platform Fee Configuration (NEW)
+// MARK: - Platform Fee Configuration
 struct PlatformFeeConfig {
     static let serviceFeePercentage: Double = 5.0 // 5% platform fee
     static let stripeFeePercentage: Double = 2.9 // 2.9% Stripe fee
