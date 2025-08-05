@@ -10,86 +10,49 @@
 //  ServUApp.swift
 //  ServU
 //
-//  Created by Quian Bowden on 8/3/25.
-//  Main app initialization with Stripe configuration
+//  Created by Quian Bowden on 8/4/25.
+//  Main app entry point with Stripe integration
 //
 
 import SwiftUI
-import UIKit
+import Stripe
 
 @main
 struct ServUApp: App {
     
     init() {
-        // Initialize Stripe configuration on app startup
         configureStripe()
-        
-        // Additional app setup
-        configureAppearance()
     }
     
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .onAppear {
-                    // Validate Stripe configuration on first launch
-                    validateStripeSetup()
-                }
         }
     }
     
-    // MARK: - Configuration Methods
-    
+    // MARK: - Stripe Configuration
     private func configureStripe() {
-        // Configure Stripe with app settings
-        StripeConfig.configure()
-        
-        print("🏁 ServU App initialized with Stripe integration")
-        
         #if DEBUG
-        print("🔧 \(StripeConfig.getEnvironmentInfo())")
-        #endif
-    }
-    
-    private func configureAppearance() {
-        // Configure global UI appearance for ServU
-        
-        // Navigation bar appearance
-        let appearance = UINavigationBarAppearance()
-        appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor.systemBackground
-        appearance.titleTextAttributes = [
-            .foregroundColor: UIColor.label,
-            .font: UIFont.systemFont(ofSize: 18, weight: .semibold)
-        ]
-        
-        UINavigationBar.appearance().standardAppearance = appearance
-        UINavigationBar.appearance().scrollEdgeAppearance = appearance
-        
-        // Tab bar appearance (if using tab bar)
-        let tabBarAppearance = UITabBarAppearance()
-        tabBarAppearance.configureWithOpaqueBackground()
-        tabBarAppearance.backgroundColor = UIColor.systemBackground
-        
-        UITabBar.appearance().standardAppearance = tabBarAppearance
-        UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
-    }
-    
-    private func validateStripeSetup() {
-        #if DEBUG
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            let isValid = StripeConfig.validateConfiguration()
-            if !isValid {
-                print("⚠️ Stripe configuration needs attention. Check StripeConfig.swift")
-            } else {
-                print("✅ Stripe is ready for payments")
-            }
+        // Development - use test keys
+        if let publishableKey = StripeConfig.developmentPublishableKey {
+            StripeAPI.defaultPublishableKey = publishableKey
+            print("✅ Stripe configured for DEVELOPMENT")
+        } else {
+            print("⚠️ Missing Stripe development keys - Check StripeConfig.swift")
+        }
+        #else
+        // Production - use live keys
+        if let publishableKey = StripeConfig.productionPublishableKey {
+            StripeAPI.defaultPublishableKey = publishableKey
+            print("✅ Stripe configured for PRODUCTION")
+        } else {
+            print("❌ Missing Stripe production keys - Check StripeConfig.swift")
         }
         #endif
     }
 }
 
-// MARK: - Content View (Main App View)
+// MARK: - Content View (Main App Entry Point)
 struct ContentView: View {
     @StateObject private var userProfile = UserProfile()
     @StateObject private var bookingManager = BookingManager()
@@ -100,8 +63,9 @@ struct ContentView: View {
                 Text("ServU")
                     .font(.largeTitle)
                     .fontWeight(.bold)
+                    .foregroundColor(.servURed)
                 
-                Text("Payment System Ready!")
+                Text("Your Campus Service Marketplace")
                     .font(.headline)
                     .foregroundColor(.secondary)
                 
@@ -111,7 +75,7 @@ struct ContentView: View {
                         .environmentObject(userProfile)
                         .environmentObject(bookingManager)
                 }
-                .foregroundColor(.blue)
+                .foregroundColor(.servURed)
                 #endif
                 
                 Spacer()
@@ -151,12 +115,12 @@ struct PaymentTestView: View {
                 NavigationLink("Test Deposit Payment") {
                     PaymentIntegrationView(for: sampleBooking, type: .deposit)
                 }
-                .foregroundColor(.blue)
+                .foregroundColor(.servURed)
                 
                 NavigationLink("Test Full Payment") {
                     PaymentIntegrationView(for: sampleBooking, type: .full)
                 }
-                .foregroundColor(.blue)
+                .foregroundColor(.servURed)
             } else {
                 Text("No sample bookings available")
                     .foregroundColor(.secondary)
@@ -171,7 +135,8 @@ struct PaymentTestView: View {
 }
 #endif
 
-// MARK: - Color Extension
+// MARK: - ServU Brand Colors
 extension Color {
     static let servURed = Color(red: 0.8, green: 0.2, blue: 0.2)
+    static let servUSecondary = Color(red: 0.2, green: 0.4, blue: 0.8)
 }

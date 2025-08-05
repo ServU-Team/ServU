@@ -7,7 +7,7 @@
 
 
 //
-//  PaymentTypes.swift
+//  ServUPaymentType.swift
 //  ServU
 //
 //  Created by Quian Bowden on 8/4/25.
@@ -68,7 +68,7 @@ enum ServUPaymentType: String, CaseIterable, Codable, Hashable {
     }
 }
 
-// MARK: - Payment Status
+// MARK: - Payment Status (SINGLE SOURCE OF TRUTH)
 enum PaymentStatus: String, CaseIterable, Codable {
     case pending = "Pending"
     case depositPaid = "Deposit Paid"
@@ -100,6 +100,25 @@ enum PaymentStatus: String, CaseIterable, Codable {
     }
 }
 
+// MARK: - Deposit Type
+enum DepositType: String, CaseIterable, Codable {
+    case fixed = "Fixed Amount"
+    case percentage = "Percentage"
+    
+    var displayName: String {
+        return self.rawValue
+    }
+    
+    var description: String {
+        switch self {
+        case .fixed:
+            return "Fixed dollar amount"
+        case .percentage:
+            return "Percentage of service price"
+        }
+    }
+}
+
 // MARK: - Payment Error Types
 enum PaymentError: Error, LocalizedError {
     case invalidAmount
@@ -124,7 +143,7 @@ enum PaymentError: Error, LocalizedError {
     }
 }
 
-// MARK: - Legacy Support (If needed)
+// MARK: - Legacy Support
 typealias PaymentOption = ServUPaymentType
 
 // MARK: - Extensions for Convenience
