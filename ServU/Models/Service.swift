@@ -7,7 +7,7 @@
 
 
 //
-//  ServUService.swift
+//  Service.swift
 //  ServU
 //
 //  Created by Quian Bowden on 8/4/25.
@@ -230,3 +230,6 @@ struct Booking: Identifiable, Codable {
         return timeSlot.endTime < Date()
     }
 }
+
+// MARK: - Legacy Support Alias
+typealias ServUService = Service

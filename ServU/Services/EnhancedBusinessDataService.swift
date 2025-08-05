@@ -2,7 +2,7 @@
 //  EnhancedBusinessDataService.swift
 //  ServU
 //
-//  Created by Amber Still on 7/31/25.
+//  Created by Amber Still on 8/5/25.
 //
 
 
@@ -11,8 +11,6 @@
 //  ServU
 //
 //  Created by Quian Bowden on 7/29/25.
-//  Updated by Assistant on 7/31/25.
-//  Fixed compilation errors and type mismatches
 //
 
 import Foundation
@@ -90,7 +88,7 @@ class EnhancedBusinessDataService: ObservableObject {
             createProduct(
                 name: "FA Snapback Hat",
                 description: "Embroidered snapback cap with adjustable fit. Complete your look with this premium headwear.",
-                category: .accessories,
+                category: .other, // Fix: Changed from .accessories to .other
                 basePrice: 35.0,
                 variants: [
                     createVariant(name: "One Size - Black/Gold", price: 35.0, attributes: [("Size", "One Size"), ("Color", "Black/Gold")], quantity: 15),
@@ -121,7 +119,7 @@ class EnhancedBusinessDataService: ObservableObject {
             services: [],
             availability: BusinessHours.defaultHours,
             products: hoodies,
-            productCategories: [.clothing, .accessories],
+            productCategories: [.clothing, .other],
             shippingOptions: [.campusPickup, .dormDelivery, .standardShipping],
             returnPolicy: "30-day return policy for unworn items with tags. Exchange available for size/color.",
             isVerified: true,
@@ -233,10 +231,10 @@ class EnhancedBusinessDataService: ObservableObject {
             ownerName: "Marcus Lee",
             serviceCategories: [.photoVideo],
             services: [
-                ServUService(name: "Event Photography", description: "Full event coverage with professional editing", price: 150.0, duration: "3 hours", requiresDeposit: true, depositAmount: 50.0, depositType: .fixed, depositPolicy: "50% deposit required to secure booking. Refundable if cancelled 48+ hours before event."),
-                ServUService(name: "Portrait Session", description: "Professional headshots and portraits", price: 75.0, duration: "1 hour", requiresDeposit: true, depositAmount: 25.0, depositType: .fixed, depositPolicy: "25% deposit required. Non-refundable if cancelled within 24 hours."),
-                ServUService(name: "Video Editing", description: "Professional video editing and color grading", price: 100.0, duration: "2 days", requiresDeposit: false),
-                ServUService(name: "Social Media Package", description: "Photos + videos optimized for social media", price: 200.0, duration: "2 hours", requiresDeposit: true, depositAmount: 30.0, depositType: .percentage, depositPolicy: "30% deposit required for social media packages.")
+                Service(name: "Event Photography", description: "Full event coverage with professional editing", price: 150.0, duration: "3 hours", requiresDeposit: true, depositAmount: 50.0, depositType: .fixed, depositPolicy: "50% deposit required to secure booking. Refundable if cancelled 48+ hours before event."),
+                Service(name: "Portrait Session", description: "Professional headshots and portraits", price: 75.0, duration: "1 hour", requiresDeposit: true, depositAmount: 25.0, depositType: .fixed, depositPolicy: "25% deposit required. Non-refundable if cancelled within 24 hours."),
+                Service(name: "Video Editing", description: "Professional video editing and color grading", price: 100.0, duration: "2 days", requiresDeposit: false),
+                Service(name: "Social Media Package", description: "Photos + videos optimized for social media", price: 200.0, duration: "2 hours", requiresDeposit: true, depositAmount: 30.0, depositType: .percentage, depositPolicy: "30% deposit required for social media packages.")
             ],
             availability: BusinessHours.defaultHours,
             products: [],
@@ -276,9 +274,9 @@ class EnhancedBusinessDataService: ObservableObject {
         ]
         
         let services = [
-            ServUService(name: "Phone Screen Repair", description: "Quick and affordable phone screen replacement", price: 45.0, duration: "1 hour", requiresDeposit: false),
-            ServUService(name: "Laptop Cleaning", description: "Deep cleaning and optimization for laptops", price: 30.0, duration: "2 hours", requiresDeposit: false),
-            ServUService(name: "Tech Setup", description: "Help setting up new devices and software", price: 25.0, duration: "1 hour", requiresDeposit: false)
+            Service(name: "Phone Screen Repair", description: "Quick and affordable phone screen replacement", price: 45.0, duration: "1 hour", requiresDeposit: false),
+            Service(name: "Laptop Cleaning", description: "Deep cleaning and optimization for laptops", price: 30.0, duration: "2 hours", requiresDeposit: false),
+            Service(name: "Tech Setup", description: "Help setting up new devices and software", price: 25.0, duration: "1 hour", requiresDeposit: false)
         ]
         
         let business = EnhancedBusiness(
@@ -331,9 +329,9 @@ class EnhancedBusinessDataService: ObservableObject {
                 ownerName: "Jerome Washington",
                 serviceCategories: [.barber],
                 services: [
-                    ServUService(name: "Haircut & Style", description: "Complete haircut with styling", price: 20.0, duration: "45 minutes", requiresDeposit: false),
-                    ServUService(name: "Beard Trim", description: "Professional beard shaping and trim", price: 15.0, duration: "30 minutes", requiresDeposit: false),
-                    ServUService(name: "Hot Towel Shave", description: "Traditional hot towel shave experience", price: 25.0, duration: "30 minutes", requiresDeposit: false)
+                    Service(name: "Haircut & Style", description: "Complete haircut with styling", price: 20.0, duration: "45 minutes", requiresDeposit: false),
+                    Service(name: "Beard Trim", description: "Professional beard shaping and trim", price: 15.0, duration: "30 minutes", requiresDeposit: false),
+                    Service(name: "Hot Towel Shave", description: "Traditional hot towel shave experience", price: 25.0, duration: "30 minutes", requiresDeposit: false)
                 ],
                 availability: BusinessHours.defaultHours,
                 products: [],
@@ -358,9 +356,9 @@ class EnhancedBusinessDataService: ObservableObject {
                 ownerName: "Aaliyah Johnson",
                 serviceCategories: [.hairStylist],
                 services: [
-                    ServUService(name: "Wash & Style", description: "Professional wash, condition, and styling", price: 35.0, duration: "1.5 hours", requiresDeposit: false),
-                    ServUService(name: "Protective Styling", description: "Braids, twists, and protective styles", price: 80.0, duration: "3 hours", requiresDeposit: true, depositAmount: 25.0, depositType: .percentage, depositPolicy: "25% deposit required for protective styling appointments."),
-                    ServUService(name: "Special Event Hair", description: "Formal styling for events and occasions", price: 60.0, duration: "2 hours", requiresDeposit: true, depositAmount: 20.0, depositType: .fixed, depositPolicy: "$20 deposit required for special event styling.")
+                    Service(name: "Wash & Style", description: "Professional wash, condition, and styling", price: 35.0, duration: "1.5 hours", requiresDeposit: false),
+                    Service(name: "Protective Styling", description: "Braids, twists, and protective styles", price: 80.0, duration: "3 hours", requiresDeposit: true, depositAmount: 25.0, depositType: .percentage, depositPolicy: "25% deposit required for protective styling appointments."),
+                    Service(name: "Special Event Hair", description: "Formal styling for events and occasions", price: 60.0, duration: "2 hours", requiresDeposit: true, depositAmount: 20.0, depositType: .fixed, depositPolicy: "$20 deposit required for special event styling.")
                 ],
                 availability: BusinessHours.defaultHours,
                 products: [],
@@ -385,9 +383,9 @@ class EnhancedBusinessDataService: ObservableObject {
                 ownerName: "David Chen",
                 serviceCategories: [.tutor],
                 services: [
-                    ServUService(name: "Math Tutoring", description: "Algebra through Calculus support", price: 25.0, duration: "1 hour", requiresDeposit: false),
-                    ServUService(name: "Science Tutoring", description: "Biology, Chemistry, Physics help", price: 30.0, duration: "1 hour", requiresDeposit: false),
-                    ServUService(name: "Writing Center", description: "Essay writing and grammar assistance", price: 20.0, duration: "1 hour", requiresDeposit: false)
+                    Service(name: "Math Tutoring", description: "Algebra through Calculus support", price: 25.0, duration: "1 hour", requiresDeposit: false),
+                    Service(name: "Science Tutoring", description: "Biology, Chemistry, Physics help", price: 30.0, duration: "1 hour", requiresDeposit: false),
+                    Service(name: "Writing Center", description: "Essay writing and grammar assistance", price: 20.0, duration: "1 hour", requiresDeposit: false)
                 ],
                 availability: BusinessHours.defaultHours,
                 products: [],

@@ -1,12 +1,4 @@
 //
-//  DepositType.swift
-//  ServU
-//
-//  Created by Amber Still on 8/5/25.
-//
-
-
-//
 //  CoreModels.swift
 //  ServU
 //
@@ -315,5 +307,29 @@ enum ShippingOption: String, CaseIterable, Identifiable, Codable {
     
     var description: String {
         return "Delivery via \(displayName.lowercased())"
+    }
+}
+
+// MARK: - Payment Error Types
+enum PaymentError: Error, LocalizedError {
+    case invalidAmount
+    case paymentFailed(String)
+    case networkError
+    case invalidConfiguration
+    case userCancelled
+    
+    var errorDescription: String? {
+        switch self {
+        case .invalidAmount:
+            return "Invalid payment amount"
+        case .paymentFailed(let message):
+            return message
+        case .networkError:
+            return "Network connection error"
+        case .invalidConfiguration:
+            return "Payment configuration error"
+        case .userCancelled:
+            return "Payment cancelled by user"
+        }
     }
 }

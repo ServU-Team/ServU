@@ -11,7 +11,6 @@
 //  ServU
 //
 //  Created by Quian Bowden on 8/4/25.
-//  Handles all payment processing for services and products
 //
 
 import Foundation
@@ -156,33 +155,20 @@ class BookingManager: ObservableObject {
             depositType: .fixed
         )
         
-        let sampleBusiness = Business(
-            name: "Campus Cuts",
-            category: .hairStylist,
-            description: "Your campus hair salon",
-            rating: 4.8,
-            priceRange: .moderate,
-            imageURL: nil,
-            isActive: true,
-            location: "Student Union Building",
-            contactInfo: ContactInfo(email: "cuts@campus.edu", phone: "(555) 123-4567"),
-            services: [sampleService],
-            availability: BusinessHours.defaultHours
+        let timeSlot = TimeSlot(
+            startTime: Calendar.current.date(byAdding: .hour, value: 2, to: Date()) ?? Date(),
+            endTime: Calendar.current.date(byAdding: .hour, value: 3, to: Date()) ?? Date()
         )
         
         let sampleBooking = Booking(
             service: sampleService,
-            business: sampleBusiness,
-            customerName: "John Doe",
-            customerEmail: "john@university.edu",
-            customerPhone: "(555) 987-6543",
-            appointmentDate: Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date(),
-            startTime: Calendar.current.date(byAdding: .hour, value: 2, to: Date()) ?? Date(),
-            endTime: Calendar.current.date(byAdding: .hour, value: 3, to: Date()) ?? Date(),
-            status: .confirmed,
-            notes: "Please bring ID",
-            totalPrice: sampleService.price,
-            paymentStatus: .pending
+            businessId: "sample_business_123",
+            businessName: "Campus Cuts",
+            clientName: "John Doe",
+            clientEmail: "john@university.edu",
+            clientPhone: "(555) 987-6543",
+            timeSlot: timeSlot,
+            specialRequests: "Please bring ID"
         )
         
         userBookings = [sampleBooking]
