@@ -7,10 +7,11 @@
 
 
 //
-//  CartModels.swift
+//  CartItem.swift
 //  ServU
 //
-//  Created by Quian Bowden on 8/4/25.
+//  Created by Quian Bowden on 8/5/25.
+//  Fixed compilation errors and Codable conformance
 //
 
 import Foundation
@@ -202,10 +203,10 @@ class ShoppingCartManager: ObservableObject {
         return getItem(for: product, variant: variant)?.quantity ?? 0
     }
     
-    // MARK: - Business Grouping
-    func getItems(for business: EnhancedBusiness) -> [CartItem] {
+    // MARK: - Business Grouping - Fixed method signature
+    func getItemsForBusiness(businessId: String) -> [CartItem] {
         return items.filter { item in
-            item.businessId == business.id.uuidString
+            item.businessId == businessId
         }
     }
     
@@ -221,7 +222,7 @@ class ShoppingCartManager: ObservableObject {
     }
     
     // MARK: - Category Filtering
-    func getItems(for category: ProductCategory) -> [CartItem] {
+    func getItemsForCategory(_ category: ProductCategory) -> [CartItem] {
         return items.filter { $0.product.category == category }
     }
     
