@@ -38,6 +38,13 @@ struct Service: Codable, Identifiable {
     var createdDate: Date
     var lastModified: Date
     
+    enum CodingKeys: String, CodingKey {
+        case name, description, price, duration, isAvailable, category
+        case images, requirements, cancellationPolicy
+        case requiresDeposit, depositAmount, depositType, depositPolicy
+        case createdDate, lastModified
+    }
+    
     init(name: String, description: String, price: Double, duration: String, isAvailable: Bool = true, category: ServiceCategory? = nil, images: [String] = [], requirements: [String] = [], cancellationPolicy: String = "24 hours notice required", requiresDeposit: Bool = false, depositAmount: Double = 0.0, depositType: DepositType = .fixed, depositPolicy: String = "") {
         self.name = name
         self.description = description
@@ -99,6 +106,11 @@ struct TimeSlot: Identifiable, Codable {
     var businessId: String?
     var serviceId: String?
     var bookingId: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case startTime, endTime, isAvailable, isBooked
+        case businessId, serviceId, bookingId
+    }
     
     init(startTime: Date, endTime: Date, isAvailable: Bool = true, isBooked: Bool = false, businessId: String? = nil, serviceId: String? = nil, bookingId: String? = nil) {
         self.startTime = startTime
@@ -164,6 +176,12 @@ struct Booking: Identifiable, Codable {
     var cancellationReason: String?
     var createdDate: Date
     var lastModified: Date
+    
+    enum CodingKeys: String, CodingKey {
+        case service, businessId, businessName, clientName, clientEmail, clientPhone
+        case timeSlot, status, paymentStatus, totalCost, depositPaid, remainingBalance
+        case specialRequests, cancellationReason, createdDate, lastModified
+    }
     
     init(service: Service, businessId: String, businessName: String, clientName: String, clientEmail: String, clientPhone: String? = nil, timeSlot: TimeSlot, specialRequests: String? = nil) {
         self.service = service

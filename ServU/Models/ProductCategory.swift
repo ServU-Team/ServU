@@ -7,7 +7,7 @@
 
 
 //
-//  ProductModels.swift
+//  ProductCategory.swift
 //  ServU
 //
 //  Created by Quian Bowden on 8/4/25.
@@ -17,7 +17,7 @@ import Foundation
 import SwiftUI
 
 // MARK: - Product Category
-enum ProductCategory: String, CaseIterable, Identifiable {
+enum ProductCategory: String, CaseIterable, Identifiable, Codable {
     case clothing = "CLOTHING"
     case electronics = "ELECTRONICS"
     case books = "BOOKS"
@@ -78,7 +78,7 @@ enum ProductCategory: String, CaseIterable, Identifiable {
 }
 
 // MARK: - Stock Status
-enum StockStatus: String, CaseIterable {
+enum StockStatus: String, CaseIterable, Codable {
     case inStock = "In Stock"
     case lowStock = "Low Stock"
     case outOfStock = "Out of Stock"
@@ -115,6 +115,10 @@ struct ProductInventory: Codable, Identifiable {
     var reservedQuantity: Int
     var lastRestocked: Date?
     
+    enum CodingKeys: String, CodingKey {
+        case quantity, lowStockThreshold, trackInventory, reservedQuantity, lastRestocked
+    }
+    
     init(quantity: Int, lowStockThreshold: Int = 5, trackInventory: Bool = true, reservedQuantity: Int = 0, lastRestocked: Date? = nil) {
         self.quantity = quantity
         self.lowStockThreshold = lowStockThreshold
@@ -147,6 +151,10 @@ struct ProductImage: Codable, Identifiable {
     var altText: String
     var displayOrder: Int
     
+    enum CodingKeys: String, CodingKey {
+        case imageURL, isPrimary, altText, displayOrder
+    }
+    
     init(imageURL: String, isPrimary: Bool = false, altText: String, displayOrder: Int = 0) {
         self.imageURL = imageURL
         self.isPrimary = isPrimary
@@ -162,6 +170,10 @@ struct ProductSpecification: Codable, Identifiable {
     var value: String
     var displayOrder: Int
     
+    enum CodingKeys: String, CodingKey {
+        case name, value, displayOrder
+    }
+    
     init(name: String, value: String, displayOrder: Int = 0) {
         self.name = name
         self.value = value
@@ -175,6 +187,10 @@ struct VariantAttribute: Codable, Identifiable {
     var name: String
     var value: String
     var displayOrder: Int
+    
+    enum CodingKeys: String, CodingKey {
+        case name, value, displayOrder
+    }
     
     init(name: String, value: String, displayOrder: Int = 0) {
         self.name = name
@@ -192,6 +208,10 @@ struct ProductVariant: Codable, Identifiable {
     var attributes: [VariantAttribute]
     var inventory: ProductInventory
     var isActive: Bool
+    
+    enum CodingKeys: String, CodingKey {
+        case name, price, sku, attributes, inventory, isActive
+    }
     
     init(name: String, price: Double, sku: String, attributes: [VariantAttribute], inventory: ProductInventory, isActive: Bool = true) {
         self.name = name
@@ -227,6 +247,11 @@ struct Product: Codable, Identifiable {
     var isActive: Bool
     var createdDate: Date
     var lastModified: Date
+    
+    enum CodingKeys: String, CodingKey {
+        case name, description, category, basePrice, images, variants
+        case inventory, specifications, tags, isActive, createdDate, lastModified
+    }
     
     init(name: String, description: String, category: ProductCategory, basePrice: Double, images: [ProductImage] = [], variants: [ProductVariant] = [], inventory: ProductInventory, specifications: [ProductSpecification] = [], tags: [String] = [], isActive: Bool = true) {
         self.name = name

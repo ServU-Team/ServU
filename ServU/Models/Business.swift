@@ -7,7 +7,7 @@
 
 
 //
-//  BusinessModels.swift
+//  Business.swift
 //  ServU
 //
 //  Created by Quian Bowden on 8/5/25.
@@ -68,6 +68,14 @@ struct EnhancedBusiness: Identifiable, Codable {
     var joinedDate: Date
     var totalSales: Int
     var responseTime: String
+    
+    enum CodingKeys: String, CodingKey {
+        case name, businessType, description, rating, priceRange, imageURL
+        case isActive, location, contactInfo, ownerId, ownerName
+        case serviceCategories, services, availability
+        case productCategories, products, shippingOptions, returnPolicy
+        case isVerified, joinedDate, totalSales, responseTime
+    }
     
     init(name: String, businessType: BusinessType, description: String, rating: Double, priceRange: PriceRange, imageURL: String? = nil, isActive: Bool = true, location: String, contactInfo: ContactInfo, ownerId: String, ownerName: String, serviceCategories: [ServiceCategory] = [], services: [Service] = [], availability: BusinessHours = .defaultHours, productCategories: [ProductCategory] = [], products: [Product] = [], shippingOptions: [ShippingOption] = [], returnPolicy: String = "", isVerified: Bool = false, joinedDate: Date = Date(), totalSales: Int = 0, responseTime: String = "Usually responds within 1 hour") {
         
@@ -175,23 +183,31 @@ class UserProfile: ObservableObject {
 }
 
 // MARK: - College Model
-struct College {
+struct College: Codable {
     let id: String
     let name: String
     let domain: String
-    let primaryColor: Color
-    let secondaryColor: Color
+    let primaryColor: String // Store as hex string for Codable
+    let secondaryColor: String // Store as hex string for Codable
     let logoURL: String?
     let state: String
     let city: String
     let isHBCU: Bool
     
+    var primaryColorValue: Color {
+        return Color(hex: primaryColor) ?? .blue
+    }
+    
+    var secondaryColorValue: Color {
+        return Color(hex: secondaryColor) ?? .gray
+    }
+    
     var colorScheme: CollegeColorScheme {
         CollegeColorScheme(
-            primary: primaryColor,
-            secondary: secondaryColor,
-            background: primaryColor.opacity(0.1),
-            accent: secondaryColor
+            primary: primaryColorValue,
+            secondary: secondaryColorValue,
+            background: primaryColorValue.opacity(0.1),
+            accent: secondaryColorValue
         )
     }
 }
@@ -202,4 +218,32 @@ struct CollegeColorScheme {
     let secondary: Color
     let background: Color
     let accent: Color
+}
+
+// MARK: - Color Extension for Hex Support
+extension Color {
+    init?(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&int)
+        let a, r, g, b: UInt64
+        switch hex.count {
+        case 3: // RGB (12-bit)
+            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
+        case 6: // RGB (24-bit)
+            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
+        case 8: // ARGB (32-bit)
+            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
+        default:
+            return nil
+        }
+        
+        self.init(
+            .sRGB,
+            red: Double(r) / 255,
+            green: Double(g) / 255,
+            blue:  Double(b) / 255,
+            opacity: Double(a) / 255
+        )
+    }
 }
