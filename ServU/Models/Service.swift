@@ -2,7 +2,7 @@
 //  Service.swift
 //  ServU
 //
-//  Created by Amber Still on 8/5/25.
+//  Created by Amber Still on 8/6/25.
 //
 
 
@@ -10,7 +10,9 @@
 //  Service.swift
 //  ServU
 //
-//  Created by Quian Bowden on 8/4/25.
+//  Created by Quian Bowden on 8/6/25.
+//  Fixed by Quian Bowden on 8/6/25.
+//  Resolved all compilation errors and ambiguous type references
 //
 
 import Foundation
@@ -18,14 +20,14 @@ import SwiftUI
 
 // MARK: - Service Model (Primary Service Model)
 struct Service: Codable, Identifiable {
-    let id = UUID()
+    let id: UUID
     var name: String
     var description: String
     var price: Double
     var duration: String
     var isAvailable: Bool
     var category: ServiceCategory?
-    var images: [String]
+    var images: [ServiceImage]
     var requirements: [String]
     var cancellationPolicy: String
     
@@ -39,13 +41,28 @@ struct Service: Codable, Identifiable {
     var lastModified: Date
     
     enum CodingKeys: String, CodingKey {
-        case name, description, price, duration, isAvailable, category
+        case id, name, description, price, duration, isAvailable, category
         case images, requirements, cancellationPolicy
         case requiresDeposit, depositAmount, depositType, depositPolicy
         case createdDate, lastModified
     }
     
-    init(name: String, description: String, price: Double, duration: String, isAvailable: Bool = true, category: ServiceCategory? = nil, images: [String] = [], requirements: [String] = [], cancellationPolicy: String = "24 hours notice required", requiresDeposit: Bool = false, depositAmount: Double = 0.0, depositType: DepositType = .fixed, depositPolicy: String = "") {
+    init(
+        name: String,
+        description: String,
+        price: Double,
+        duration: String,
+        isAvailable: Bool = true,
+        category: ServiceCategory? = nil,
+        images: [ServiceImage] = [],
+        requirements: [String] = [],
+        cancellationPolicy: String = "24 hours notice required",
+        requiresDeposit: Bool = false,
+        depositAmount: Double = 0.0,
+        depositType: DepositType = .fixed,
+        depositPolicy: String = ""
+    ) {
+        self.id = UUID()
         self.name = name
         self.description = description
         self.price = price
@@ -61,6 +78,49 @@ struct Service: Codable, Identifiable {
         self.depositPolicy = depositPolicy
         self.createdDate = Date()
         self.lastModified = Date()
+    }
+    
+    // MARK: - Codable Implementation
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        self.id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        self.name = try container.decode(String.self, forKey: .name)
+        self.description = try container.decode(String.self, forKey: .description)
+        self.price = try container.decode(Double.self, forKey: .price)
+        self.duration = try container.decode(String.self, forKey: .duration)
+        self.isAvailable = try container.decodeIfPresent(Bool.self, forKey: .isAvailable) ?? true
+        self.category = try container.decodeIfPresent(ServiceCategory.self, forKey: .category)
+        self.images = try container.decodeIfPresent([ServiceImage].self, forKey: .images) ?? []
+        self.requirements = try container.decodeIfPresent([String].self, forKey: .requirements) ?? []
+        self.cancellationPolicy = try container.decodeIfPresent(String.self, forKey: .cancellationPolicy) ?? "24 hours notice required"
+        self.requiresDeposit = try container.decodeIfPresent(Bool.self, forKey: .requiresDeposit) ?? false
+        self.depositAmount = try container.decodeIfPresent(Double.self, forKey: .depositAmount) ?? 0.0
+        self.depositType = try container.decodeIfPresent(DepositType.self, forKey: .depositType) ?? .fixed
+        self.depositPolicy = try container.decodeIfPresent(String.self, forKey: .depositPolicy) ?? ""
+        self.createdDate = try container.decodeIfPresent(Date.self, forKey: .createdDate) ?? Date()
+        self.lastModified = try container.decodeIfPresent(Date.self, forKey: .lastModified) ?? Date()
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(description, forKey: .description)
+        try container.encode(price, forKey: .price)
+        try container.encode(duration, forKey: .duration)
+        try container.encode(isAvailable, forKey: .isAvailable)
+        try container.encodeIfPresent(category, forKey: .category)
+        try container.encode(images, forKey: .images)
+        try container.encode(requirements, forKey: .requirements)
+        try container.encode(cancellationPolicy, forKey: .cancellationPolicy)
+        try container.encode(requiresDeposit, forKey: .requiresDeposit)
+        try container.encode(depositAmount, forKey: .depositAmount)
+        try container.encode(depositType, forKey: .depositType)
+        try container.encode(depositPolicy, forKey: .depositPolicy)
+        try container.encode(createdDate, forKey: .createdDate)
+        try container.encode(lastModified, forKey: .lastModified)
     }
     
     // MARK: - Computed Properties
@@ -91,75 +151,25 @@ struct Service: Codable, Identifiable {
         return price - calculatedDepositAmount
     }
     
-    var primaryImage: String? {
-        return images.first
-    }
-}
-
-// MARK: - Time Slot
-struct TimeSlot: Identifiable, Codable {
-    let id = UUID()
-    var startTime: Date
-    var endTime: Date
-    var isAvailable: Bool
-    var isBooked: Bool
-    var businessId: String?
-    var serviceId: String?
-    var bookingId: String?
-    
-    enum CodingKeys: String, CodingKey {
-        case startTime, endTime, isAvailable, isBooked
-        case businessId, serviceId, bookingId
+    var primaryImage: ServiceImage? {
+        return images.first(where: { $0.isPrimary }) ?? images.first
     }
     
-    init(startTime: Date, endTime: Date, isAvailable: Bool = true, isBooked: Bool = false, businessId: String? = nil, serviceId: String? = nil, bookingId: String? = nil) {
-        self.startTime = startTime
-        self.endTime = endTime
-        self.isAvailable = isAvailable
-        self.isBooked = isBooked
-        self.businessId = businessId
-        self.serviceId = serviceId
-        self.bookingId = bookingId
+    var formattedDuration: String {
+        return duration
     }
     
-    // MARK: - Computed Properties
-    var formattedTimeRange: String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return "\(formatter.string(from: startTime)) - \(formatter.string(from: endTime))"
-    }
-    
-    var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        return formatter.string(from: startTime)
-    }
-    
-    var duration: TimeInterval {
-        return endTime.timeIntervalSince(startTime)
-    }
-    
-    var durationString: String {
-        let hours = Int(duration) / 3600
-        let minutes = Int(duration) % 3600 / 60
-        
-        if hours > 0 && minutes > 0 {
-            return "\(hours)h \(minutes)m"
-        } else if hours > 0 {
-            return "\(hours)h"
-        } else {
-            return "\(minutes)m"
-        }
-    }
-    
-    var canBook: Bool {
-        return isAvailable && !isBooked && startTime > Date()
+    var isValidService: Bool {
+        return !name.isEmpty && 
+               !description.isEmpty && 
+               price > 0 && 
+               !duration.isEmpty
     }
 }
 
 // MARK: - Service Booking
 struct Booking: Identifiable, Codable {
-    let id = UUID()
+    let id: UUID
     var service: Service
     var businessId: String
     var businessName: String
@@ -178,12 +188,22 @@ struct Booking: Identifiable, Codable {
     var lastModified: Date
     
     enum CodingKeys: String, CodingKey {
-        case service, businessId, businessName, clientName, clientEmail, clientPhone
+        case id, service, businessId, businessName, clientName, clientEmail, clientPhone
         case timeSlot, status, paymentStatus, totalCost, depositPaid, remainingBalance
         case specialRequests, cancellationReason, createdDate, lastModified
     }
     
-    init(service: Service, businessId: String, businessName: String, clientName: String, clientEmail: String, clientPhone: String? = nil, timeSlot: TimeSlot, specialRequests: String? = nil) {
+    init(
+        service: Service,
+        businessId: String,
+        businessName: String,
+        clientName: String,
+        clientEmail: String,
+        clientPhone: String? = nil,
+        timeSlot: TimeSlot,
+        specialRequests: String? = nil
+    ) {
+        self.id = UUID()
         self.service = service
         self.businessId = businessId
         self.businessName = businessName
@@ -191,14 +211,59 @@ struct Booking: Identifiable, Codable {
         self.clientEmail = clientEmail
         self.clientPhone = clientPhone
         self.timeSlot = timeSlot
-        self.status = .pending
-        self.paymentStatus = service.requiresDeposit ? .pending : .notRequired
+        self.status = BookingStatus.pending
+        self.paymentStatus = service.requiresDeposit ? PaymentStatus.pending : PaymentStatus.notRequired
         self.totalCost = service.price
         self.depositPaid = 0.0
         self.remainingBalance = service.price
         self.specialRequests = specialRequests
         self.createdDate = Date()
         self.lastModified = Date()
+    }
+    
+    // MARK: - Codable Implementation
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        self.id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        self.service = try container.decode(Service.self, forKey: .service)
+        self.businessId = try container.decode(String.self, forKey: .businessId)
+        self.businessName = try container.decode(String.self, forKey: .businessName)
+        self.clientName = try container.decode(String.self, forKey: .clientName)
+        self.clientEmail = try container.decode(String.self, forKey: .clientEmail)
+        self.clientPhone = try container.decodeIfPresent(String.self, forKey: .clientPhone)
+        self.timeSlot = try container.decode(TimeSlot.self, forKey: .timeSlot)
+        self.status = try container.decode(BookingStatus.self, forKey: .status)
+        self.paymentStatus = try container.decode(PaymentStatus.self, forKey: .paymentStatus)
+        self.totalCost = try container.decode(Double.self, forKey: .totalCost)
+        self.depositPaid = try container.decodeIfPresent(Double.self, forKey: .depositPaid) ?? 0.0
+        self.remainingBalance = try container.decode(Double.self, forKey: .remainingBalance)
+        self.specialRequests = try container.decodeIfPresent(String.self, forKey: .specialRequests)
+        self.cancellationReason = try container.decodeIfPresent(String.self, forKey: .cancellationReason)
+        self.createdDate = try container.decodeIfPresent(Date.self, forKey: .createdDate) ?? Date()
+        self.lastModified = try container.decodeIfPresent(Date.self, forKey: .lastModified) ?? Date()
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(id, forKey: .id)
+        try container.encode(service, forKey: .service)
+        try container.encode(businessId, forKey: .businessId)
+        try container.encode(businessName, forKey: .businessName)
+        try container.encode(clientName, forKey: .clientName)
+        try container.encode(clientEmail, forKey: .clientEmail)
+        try container.encodeIfPresent(clientPhone, forKey: .clientPhone)
+        try container.encode(timeSlot, forKey: .timeSlot)
+        try container.encode(status, forKey: .status)
+        try container.encode(paymentStatus, forKey: .paymentStatus)
+        try container.encode(totalCost, forKey: .totalCost)
+        try container.encode(depositPaid, forKey: .depositPaid)
+        try container.encode(remainingBalance, forKey: .remainingBalance)
+        try container.encodeIfPresent(specialRequests, forKey: .specialRequests)
+        try container.encodeIfPresent(cancellationReason, forKey: .cancellationReason)
+        try container.encode(createdDate, forKey: .createdDate)
+        try container.encode(lastModified, forKey: .lastModified)
     }
     
     // MARK: - Computed Properties
@@ -215,21 +280,115 @@ struct Booking: Identifiable, Codable {
     }
     
     var canCancel: Bool {
-        return status == .pending || status == .confirmed
+        return status == BookingStatus.pending || status == BookingStatus.confirmed
     }
     
     var canReschedule: Bool {
-        return status == .pending || status == .confirmed
+        return status == BookingStatus.pending || status == BookingStatus.confirmed
     }
     
     var isUpcoming: Bool {
-        return timeSlot.startTime > Date() && (status == .confirmed || status == .pending)
+        return timeSlot.startTime > Date() && 
+               (status == BookingStatus.confirmed || status == BookingStatus.pending)
     }
     
     var isPast: Bool {
         return timeSlot.endTime < Date()
     }
+    
+    var requiresPayment: Bool {
+        return paymentStatus == PaymentStatus.pending || 
+               (paymentStatus == PaymentStatus.depositPaid && remainingBalance > 0)
+    }
+    
+    var isCompleted: Bool {
+        return status == BookingStatus.completed
+    }
+    
+    var isCancelled: Bool {
+        return status == BookingStatus.cancelled
+    }
+    
+    var statusDisplayText: String {
+        return status.displayName
+    }
+    
+    var paymentStatusDisplayText: String {
+        return paymentStatus.rawValue
+    }
 }
 
-// MARK: - Legacy Support Alias
-typealias ServUService = Service
+// MARK: - Service Extensions
+extension Service {
+    /// Creates a sample service for testing
+    static var sampleService: Service {
+        return Service(
+            name: "Hair Cut & Style",
+            description: "Professional hair cutting and styling service for all hair types",
+            price: 45.00,
+            duration: "60 minutes",
+            isAvailable: true,
+            category: ServiceCategory.hairStylist,
+            images: [],
+            requirements: ["Please arrive 5 minutes early", "Bring a valid ID"],
+            cancellationPolicy: "24 hours notice required for cancellation",
+            requiresDeposit: true,
+            depositAmount: 15.00,
+            depositType: DepositType.fixed,
+            depositPolicy: "Deposit is non-refundable if cancelled within 24 hours"
+        )
+    }
+    
+    /// Updates the last modified date
+    mutating func updateLastModified() {
+        self.lastModified = Date()
+    }
+    
+    /// Checks if the service is bookable
+    var isBookable: Bool {
+        return isAvailable && isValidService
+    }
+}
+
+// MARK: - Booking Extensions
+extension Booking {
+    /// Updates the booking status and last modified date
+    mutating func updateStatus(to newStatus: BookingStatus) {
+        self.status = newStatus
+        self.lastModified = Date()
+    }
+    
+    /// Updates the payment status and amounts
+    mutating func updatePaymentStatus(to newStatus: PaymentStatus, depositPaid: Double = 0) {
+        self.paymentStatus = newStatus
+        self.depositPaid = depositPaid
+        self.remainingBalance = totalCost - depositPaid
+        self.lastModified = Date()
+    }
+    
+    /// Cancels the booking with a reason
+    mutating func cancel(reason: String) {
+        self.status = BookingStatus.cancelled
+        self.cancellationReason = reason
+        self.lastModified = Date()
+    }
+    
+    /// Creates a sample booking for testing
+    static func sampleBooking() -> Booking {
+        let sampleTimeSlot = TimeSlot(
+            startTime: Calendar.current.date(byAdding: .hour, value: 2, to: Date()) ?? Date(),
+            endTime: Calendar.current.date(byAdding: .hour, value: 3, to: Date()) ?? Date()
+        )
+        
+        return Booking(
+            service: Service.sampleService,
+            businessId: "sample_business_123",
+            businessName: "Campus Cuts",
+            clientName: "John Doe",
+            clientEmail: "john.doe@university.edu",
+            clientPhone: "(555) 123-4567",
+            timeSlot: sampleTimeSlot,
+            specialRequests: "Please use organic products if available"
+        )
+    }
+}
