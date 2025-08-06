@@ -2,7 +2,7 @@
 //  ServUApp.swift
 //  ServU
 //
-//  Created by Amber Still on 8/4/25.
+//  Created by Amber Still on 8/6/25.
 //
 
 
@@ -11,7 +11,8 @@
 //  ServU
 //
 //  Created by Quian Bowden on 8/4/25.
-//  Main app entry point with Stripe integration
+//  Fixed by Quian Bowden on 8/5/25.
+//  Main app entry point with Stripe integration - removed duplicate ContentView
 //
 
 import SwiftUI
@@ -26,7 +27,7 @@ struct ServUApp: App {
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView() // ✅ Use ContentView from ContentView.swift (authentication flow)
         }
     }
     
@@ -49,42 +50,6 @@ struct ServUApp: App {
             print("❌ Missing Stripe production keys - Check StripeConfig.swift")
         }
         #endif
-    }
-}
-
-// MARK: - Content View (Main App Entry Point)
-struct ContentView: View {
-    @StateObject private var userProfile = UserProfile()
-    @StateObject private var bookingManager = BookingManager()
-    
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
-                Text("ServU")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .foregroundColor(.servURed)
-                
-                Text("Your Campus Service Marketplace")
-                    .font(.headline)
-                    .foregroundColor(.secondary)
-                
-                #if DEBUG
-                NavigationLink("Payment Test") {
-                    PaymentTestView()
-                        .environmentObject(userProfile)
-                        .environmentObject(bookingManager)
-                }
-                .foregroundColor(.servURed)
-                #endif
-                
-                Spacer()
-            }
-            .padding()
-            .navigationTitle("ServU")
-        }
-        .environmentObject(userProfile)
-        .environmentObject(bookingManager)
     }
 }
 
@@ -134,9 +99,3 @@ struct PaymentTestView: View {
     }
 }
 #endif
-
-// MARK: - ServU Brand Colors
-extension Color {
-    static let servURed = Color(red: 0.8, green: 0.2, blue: 0.2)
-    static let servUSecondary = Color(red: 0.2, green: 0.4, blue: 0.8)
-}
