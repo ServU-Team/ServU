@@ -2,7 +2,7 @@
 //  RoundedCorner.swift
 //  ServU
 //
-//  Created by Amber Still on 7/31/25.
+//  Created by Amber Still on 8/9/25.
 //
 
 
@@ -10,22 +10,13 @@
 //  RoundedCorner.swift
 //  ServU
 //
-//  Created by Quian Bowden on 7/31/25.
-//  Updated by Assistant on 7/31/25.
-//  Fixed ambiguous initializer conflicts
+//  Created by Quian Bowden on 8/6/25.
+//  UI shape extensions for custom corner rounding
 //
 
 import SwiftUI
-import UIKit
 
-// MARK: - View Extensions
-extension View {
-    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
-        clipShape(RoundedCorner(radius: radius, corners: corners))
-    }
-}
-
-// MARK: - Custom Shapes
+// MARK: - Rounded Corner Shape
 struct RoundedCorner: Shape {
     var radius: CGFloat = .infinity
     var corners: UIRectCorner = .allCorners
@@ -40,285 +31,295 @@ struct RoundedCorner: Shape {
     }
 }
 
-// MARK: - Additional RoundedCorner Convenience Methods
-extension RoundedCorner {
-    /// Creates a rounded corner shape for top corners only
-    static func topCorners(radius: CGFloat) -> RoundedCorner {
-        return RoundedCorner(radius: radius, corners: [.topLeft, .topRight])
-    }
-    
-    /// Creates a rounded corner shape for bottom corners only
-    static func bottomCorners(radius: CGFloat) -> RoundedCorner {
-        return RoundedCorner(radius: radius, corners: [.bottomLeft, .bottomRight])
-    }
-    
-    /// Creates a rounded corner shape for left corners only
-    static func leftCorners(radius: CGFloat) -> RoundedCorner {
-        return RoundedCorner(radius: radius, corners: [.topLeft, .bottomLeft])
-    }
-    
-    /// Creates a rounded corner shape for right corners only
-    static func rightCorners(radius: CGFloat) -> RoundedCorner {
-        return RoundedCorner(radius: radius, corners: [.topRight, .bottomRight])
-    }
-}
-
-// MARK: - Color Extensions
-extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        let a, r, g, b: UInt64
-        switch hex.count {
-        case 3: // RGB (12-bit)
-            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
-        case 6: // RGB (24-bit)
-            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
-        case 8: // ARGB (32-bit)
-            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
-        default:
-            (a, r, g, b) = (1, 1, 1, 0)
-        }
-
-        self.init(
-            .sRGB,
-            red: Double(r) / 255,
-            green: Double(g) / 255,
-            blue:  Double(b) / 255,
-            opacity: Double(a) / 255
-        )
-    }
-    
-    // Tuskegee University Brand Colors
-    static let tuskegeeGold = Color(hex: "FFD700")
-    static let tuskegeeMaroon = Color(hex: "800000")
-    
-    // ServU Brand Colors
-    static let servUGold = Color(hex: "FFD700")
-    static let servURed = Color(hex: "DC143C")
-}
-
-// MARK: - Font Extensions
-extension Font {
-    static func servUTitle(_ size: CGFloat = 32) -> Font {
-        return .system(size: size, weight: .bold, design: .rounded)
-    }
-    
-    static func servUHeadline(_ size: CGFloat = 24) -> Font {
-        return .system(size: size, weight: .semibold, design: .default)
-    }
-    
-    static func servUBody(_ size: CGFloat = 16) -> Font {
-        return .system(size: size, weight: .regular, design: .default)
-    }
-    
-    static func servUCaption(_ size: CGFloat = 12) -> Font {
-        return .system(size: size, weight: .medium, design: .default)
-    }
-}
-
-// MARK: - Animation Extensions
-extension Animation {
-    static let servUSpring = Animation.spring(response: 0.6, dampingFraction: 0.8)
-    static let servUEaseInOut = Animation.easeInOut(duration: 0.3)
-    static let servUBounce = Animation.interpolatingSpring(stiffness: 300, damping: 30)
-}
-
-// MARK: - Image Extensions
-extension Image {
-    func profileImageStyle(size: CGFloat = 50, borderColor: Color = .blue) -> some View {
-        self
-            .resizable()
-            .aspectRatio(contentMode: .fill)
-            .frame(width: size, height: size)
-            .clipShape(Circle())
-            .overlay(Circle().stroke(borderColor, lineWidth: 2))
-    }
-    
-    func businessImageStyle(height: CGFloat = 120, cornerRadius: CGFloat = 12) -> some View {
-        self
-            .resizable()
-            .aspectRatio(contentMode: .fill)
-            .frame(height: height)
-            .cornerRadius(cornerRadius)
-    }
-}
-
-// MARK: - Shadow Styles
+// MARK: - View Extension for Rounded Corners
 extension View {
-    func servUCardShadow() -> some View {
-        self.shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
+    /// Apply custom corner radius to specific corners
+    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
+        clipShape(RoundedCorner(radius: radius, corners: corners))
     }
     
-    func servUElevatedShadow() -> some View {
-        self.shadow(color: Color.black.opacity(0.15), radius: 12, x: 0, y: 6)
+    /// Apply top corner radius only
+    func topCornerRadius(_ radius: CGFloat) -> some View {
+        cornerRadius(radius, corners: [.topLeft, .topRight])
     }
     
-    func servUButtonShadow() -> some View {
-        self.shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
+    /// Apply bottom corner radius only
+    func bottomCornerRadius(_ radius: CGFloat) -> some View {
+        cornerRadius(radius, corners: [.bottomLeft, .bottomRight])
+    }
+    
+    /// Apply left corner radius only
+    func leftCornerRadius(_ radius: CGFloat) -> some View {
+        cornerRadius(radius, corners: [.topLeft, .bottomLeft])
+    }
+    
+    /// Apply right corner radius only
+    func rightCornerRadius(_ radius: CGFloat) -> some View {
+        cornerRadius(radius, corners: [.topRight, .bottomRight])
     }
 }
 
-// MARK: - Haptic Feedback
-struct HapticFeedback {
-    static func light() {
-        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-        impactFeedback.impactOccurred()
-    }
+// MARK: - Custom Card Shapes
+struct ServUCardShape: Shape {
+    var cornerRadius: CGFloat = 16
+    var shadowRadius: CGFloat = 8
     
-    static func medium() {
-        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-        impactFeedback.impactOccurred()
-    }
-    
-    static func heavy() {
-        let impactFeedback = UIImpactFeedbackGenerator(style: .heavy)
-        impactFeedback.impactOccurred()
-    }
-    
-    static func success() {
-        let notificationFeedback = UINotificationFeedbackGenerator()
-        notificationFeedback.notificationOccurred(.success)
-    }
-    
-    static func error() {
-        let notificationFeedback = UINotificationFeedbackGenerator()
-        notificationFeedback.notificationOccurred(.error)
+    func path(in rect: CGRect) -> Path {
+        return RoundedRectangle(cornerRadius: cornerRadius).path(in: rect)
     }
 }
 
-// MARK: - Custom Button Styles
-struct ServUPrimaryButtonStyle: ButtonStyle {
-    let backgroundColor: Color
-    let foregroundColor: Color
-    let cornerRadius: CGFloat
+struct ServUButtonShape: Shape {
+    var cornerRadius: CGFloat = 12
+    var isPressed: Bool = false
     
-    init(backgroundColor: Color = .servURed, foregroundColor: Color = .white, cornerRadius: CGFloat = 12) {
-        self.backgroundColor = backgroundColor
-        self.foregroundColor = foregroundColor
-        self.cornerRadius = cornerRadius
-    }
-    
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.servUHeadline(16))
-            .foregroundColor(foregroundColor)
-            .padding(.horizontal, 24)
-            .padding(.vertical, 12)
-            .background(backgroundColor)
-            .cornerRadius(cornerRadius)
-            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
-            .opacity(configuration.isPressed ? 0.8 : 1.0)
-            .animation(.servUEaseInOut, value: configuration.isPressed)
-            .servUButtonShadow()
-            .onTapGesture {
-                HapticFeedback.light()
-            }
+    func path(in rect: CGRect) -> Path {
+        let adjustedRadius = isPressed ? cornerRadius * 0.8 : cornerRadius
+        return RoundedRectangle(cornerRadius: adjustedRadius).path(in: rect)
     }
 }
 
-struct ServUSecondaryButtonStyle: ButtonStyle {
-    let borderColor: Color
-    let foregroundColor: Color
-    let cornerRadius: CGFloat
+// MARK: - Bubble Shapes
+struct ChatBubbleShape: Shape {
+    var isFromUser: Bool
+    var cornerRadius: CGFloat = 16
     
-    init(borderColor: Color = .servURed, foregroundColor: Color = .servURed, cornerRadius: CGFloat = 12) {
-        self.borderColor = borderColor
-        self.foregroundColor = foregroundColor
-        self.cornerRadius = cornerRadius
-    }
-    
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.servUHeadline(16))
-            .foregroundColor(foregroundColor)
-            .padding(.horizontal, 24)
-            .padding(.vertical, 12)
-            .background(Color.clear)
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(borderColor, lineWidth: 2)
-            )
-            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
-            .opacity(configuration.isPressed ? 0.8 : 1.0)
-            .animation(.servUEaseInOut, value: configuration.isPressed)
-            .onTapGesture {
-                HapticFeedback.light()
-            }
+    func path(in rect: CGRect) -> Path {
+        let corners: UIRectCorner = isFromUser ? 
+            [.topLeft, .bottomLeft, .bottomRight] : 
+            [.topRight, .bottomLeft, .bottomRight]
+        
+        let path = UIBezierPath(
+            roundedRect: rect,
+            byRoundingCorners: corners,
+            cornerRadii: CGSize(width: cornerRadius, height: cornerRadius)
+        )
+        return Path(path.cgPath)
     }
 }
 
-// MARK: - Loading States
-struct ServULoadingView: View {
-    let message: String
-    let color: Color
+struct NotificationBadgeShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        return Circle().path(in: rect)
+    }
+}
+
+// MARK: - Custom Clipping Shapes
+struct TopRoundedRectangle: Shape {
+    var cornerRadius: CGFloat
     
-    init(message: String = "Loading...", color: Color = .servURed) {
-        self.message = message
-        self.color = color
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        
+        path.move(to: CGPoint(x: 0, y: cornerRadius))
+        path.addArc(
+            center: CGPoint(x: cornerRadius, y: cornerRadius),
+            radius: cornerRadius,
+            startAngle: .degrees(180),
+            endAngle: .degrees(270),
+            clockwise: false
+        )
+        path.addLine(to: CGPoint(x: rect.width - cornerRadius, y: 0))
+        path.addArc(
+            center: CGPoint(x: rect.width - cornerRadius, y: cornerRadius),
+            radius: cornerRadius,
+            startAngle: .degrees(270),
+            endAngle: .degrees(0),
+            clockwise: false
+        )
+        path.addLine(to: CGPoint(x: rect.width, y: rect.height))
+        path.addLine(to: CGPoint(x: 0, y: rect.height))
+        path.closeSubpath()
+        
+        return path
+    }
+}
+
+struct BottomRoundedRectangle: Shape {
+    var cornerRadius: CGFloat
+    
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        
+        path.move(to: CGPoint(x: 0, y: 0))
+        path.addLine(to: CGPoint(x: rect.width, y: 0))
+        path.addLine(to: CGPoint(x: rect.width, y: rect.height - cornerRadius))
+        path.addArc(
+            center: CGPoint(x: rect.width - cornerRadius, y: rect.height - cornerRadius),
+            radius: cornerRadius,
+            startAngle: .degrees(0),
+            endAngle: .degrees(90),
+            clockwise: false
+        )
+        path.addLine(to: CGPoint(x: cornerRadius, y: rect.height))
+        path.addArc(
+            center: CGPoint(x: cornerRadius, y: rect.height - cornerRadius),
+            radius: cornerRadius,
+            startAngle: .degrees(90),
+            endAngle: .degrees(180),
+            clockwise: false
+        )
+        path.closeSubpath()
+        
+        return path
+    }
+}
+
+// MARK: - Tab Bar Shape
+struct CustomTabBarShape: Shape {
+    var cornerRadius: CGFloat = 20
+    var tabHeight: CGFloat = 80
+    
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        
+        // Start from bottom left
+        path.move(to: CGPoint(x: 0, y: rect.height))
+        
+        // Top left corner
+        path.addLine(to: CGPoint(x: 0, y: cornerRadius))
+        path.addQuadCurve(
+            to: CGPoint(x: cornerRadius, y: 0),
+            control: CGPoint(x: 0, y: 0)
+        )
+        
+        // Top edge
+        path.addLine(to: CGPoint(x: rect.width - cornerRadius, y: 0))
+        
+        // Top right corner
+        path.addQuadCurve(
+            to: CGPoint(x: rect.width, y: cornerRadius),
+            control: CGPoint(x: rect.width, y: 0)
+        )
+        
+        // Right edge and bottom
+        path.addLine(to: CGPoint(x: rect.width, y: rect.height))
+        path.addLine(to: CGPoint(x: 0, y: rect.height))
+        
+        return path
+    }
+}
+
+// MARK: - Wave Shapes
+struct WaveShape: Shape {
+    var amplitude: CGFloat = 20
+    var frequency: CGFloat = 2
+    var phase: CGFloat = 0
+    
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        
+        path.move(to: CGPoint(x: 0, y: rect.midY))
+        
+        for x in stride(from: 0, through: rect.width, by: 1) {
+            let relativeX = x / rect.width
+            let sine = sin(relativeX * frequency * 2 * .pi + phase)
+            let y = rect.midY + sine * amplitude
+            path.addLine(to: CGPoint(x: x, y: y))
+        }
+        
+        return path
+    }
+}
+
+// MARK: - Triangle Shapes
+struct TriangleShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        
+        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.midX, y: rect.minY))
+        
+        return path
+    }
+}
+
+struct ArrowShape: Shape {
+    var direction: ArrowDirection = .right
+    var headSize: CGFloat = 10
+    
+    enum ArrowDirection {
+        case up, down, left, right
     }
     
-    var body: some View {
-        VStack(spacing: 20) {
-            ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: color))
-                .scaleEffect(1.5)
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        
+        switch direction {
+        case .right:
+            path.move(to: CGPoint(x: rect.minX, y: rect.midY - headSize/2))
+            path.addLine(to: CGPoint(x: rect.maxX - headSize, y: rect.midY - headSize/2))
+            path.addLine(to: CGPoint(x: rect.maxX - headSize, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+            path.addLine(to: CGPoint(x: rect.maxX - headSize, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.maxX - headSize, y: rect.midY + headSize/2))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.midY + headSize/2))
             
-            Text(message)
-                .font(.servUBody())
-                .foregroundColor(color)
+        case .left:
+            path.move(to: CGPoint(x: rect.maxX, y: rect.midY - headSize/2))
+            path.addLine(to: CGPoint(x: rect.minX + headSize, y: rect.midY - headSize/2))
+            path.addLine(to: CGPoint(x: rect.minX + headSize, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.midY))
+            path.addLine(to: CGPoint(x: rect.minX + headSize, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.minX + headSize, y: rect.midY + headSize/2))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY + headSize/2))
+            
+        case .up:
+            path.move(to: CGPoint(x: rect.midX - headSize/2, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.midX - headSize/2, y: rect.minY + headSize))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + headSize))
+            path.addLine(to: CGPoint(x: rect.midX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + headSize))
+            path.addLine(to: CGPoint(x: rect.midX + headSize/2, y: rect.minY + headSize))
+            path.addLine(to: CGPoint(x: rect.midX + headSize/2, y: rect.maxY))
+            
+        case .down:
+            path.move(to: CGPoint(x: rect.midX - headSize/2, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.midX - headSize/2, y: rect.maxY - headSize))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - headSize))
+            path.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - headSize))
+            path.addLine(to: CGPoint(x: rect.midX + headSize/2, y: rect.maxY - headSize))
+            path.addLine(to: CGPoint(x: rect.midX + headSize/2, y: rect.minY))
         }
-        .padding(40)
-        .background(Color(.systemBackground))
-        .cornerRadius(16)
-        .servUElevatedShadow()
+        
+        path.closeSubpath()
+        return path
     }
 }
 
-// MARK: - Image Picker (UIKit Wrapper)
-struct ImagePicker: UIViewControllerRepresentable {
-    @Binding var imageData: Data?
-    @Environment(\.presentationMode) var presentationMode
-    
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.delegate = context.coordinator
-        picker.sourceType = .photoLibrary
-        picker.allowsEditing = true
-        return picker
-    }
-    
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-    
-    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-        let parent: ImagePicker
-        
-        init(_ parent: ImagePicker) {
-            self.parent = parent
-        }
-        
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
-            if let editedImage = info[.editedImage] as? UIImage {
-                // Compress image for better performance
-                if let imageData = editedImage.jpegData(compressionQuality: 0.7) {
-                    parent.imageData = imageData
-                }
-            } else if let originalImage = info[.originalImage] as? UIImage {
-                if let imageData = originalImage.jpegData(compressionQuality: 0.7) {
-                    parent.imageData = imageData
-                }
-            }
-            
-            parent.presentationMode.wrappedValue.dismiss()
-        }
-        
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            parent.presentationMode.wrappedValue.dismiss()
-        }
-    }
-}
+// MARK: - Usage Examples in Comments
+/*
+ Usage Examples:
+ 
+ 1. Custom corner radius:
+ Rectangle()
+     .cornerRadius(16, corners: [.topLeft, .topRight])
+ 
+ 2. Top rounded only:
+ Rectangle()
+     .topCornerRadius(20)
+ 
+ 3. Custom card shape:
+ VStack { }
+     .background(Color.white)
+     .clipShape(ServUCardShape(cornerRadius: 16))
+ 
+ 4. Chat bubble:
+ Text("Hello!")
+     .padding()
+     .background(Color.blue)
+     .clipShape(ChatBubbleShape(isFromUser: true))
+ 
+ 5. Custom tab bar:
+ HStack { }
+     .background(Color.white)
+     .clipShape(CustomTabBarShape())
+ 
+ 6. Arrow indicator:
+ ArrowShape(direction: .right)
+     .fill(Color.gray)
+     .frame(width: 20, height: 20)
+ */
