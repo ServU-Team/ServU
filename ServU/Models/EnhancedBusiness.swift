@@ -19,7 +19,7 @@ import Foundation
 import CoreLocation
 
 // MARK: - Enhanced Business Model
-struct EnhancedBusiness: Identifiable, Codable {
+struct Business: Identifiable, Codable {
     let id: UUID
     let name: String
     let description: String
@@ -238,21 +238,11 @@ struct BusinessLocation: Codable {
     let city: String
     let state: String
     let zipCode: String
-    let coordinate: Coordinate?
     let isServiceArea: Bool // For businesses that travel to customers
     let serviceRadius: Double? // In miles
     
     var fullAddress: String {
         return "\(address), \(city), \(state) \(zipCode)"
-    }
-}
-
-struct Coordinate: Codable {
-    let latitude: Double
-    let longitude: Double
-    
-    var clLocation: CLLocationCoordinate2D {
-        return CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 }
 
